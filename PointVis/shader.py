@@ -127,22 +127,22 @@ all_options = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_dis
 
 class PointShaderProgram(object):
 
-    def __init__(self, zrange, options):
+    def __init__(self, zrange, option):
         self.draw_type = 'points'
         self.is_visible = False
         self.zmin, self.zmax = zrange
 
         self.defines = ""
-        for option in options:
-            if option in all_options:
-                self.defines += "#define {}\n".format(option)
-
+        # for option in options:
+        if option in all_options:
+            self.defines += "#define {}\n".format(option)
+        # import ipdb; ipdb.set_trace()
         self.attributes = ""
-        if 'with_normals' in options:
+        if 'with_normals' == option:
             self.attributes += "attribute vec3 a_normal;\n"
-        if 'with_point_radius' in options:
+        if 'with_point_radius' == option:
             self.attributes += "attribute float a_splat_radius;\n"
-        if 'with_intensity' in options:
+        if 'with_intensity' == option:
             self.attributes += "attribute float a_intensity;\n"
 
         self.program = gl.glCreateProgram()
@@ -166,37 +166,33 @@ class PointShaderProgram(object):
         # Request a buffer slot from GPU
         self.buffer = gl.glGenBuffers(1)
 
-
-
-        # super(PointShaderProgram, self).__init__(self.vertex_str(), self.fragment_str())
-        # self.bind(vbo)
-
         self.setUniform1f('u_point_size', 3.0)
-        # if 'with_point_radius' in options:
-            # self['u_point_size'] = 300
+        if 'with_point_radius' in option:
+            self.setUniform1f('u_point_size', 300.0)
 
         self.do_blending = False
-        if 'blend' in options:
-            self.do_blending = True
+        # if 'blend' in option:
+        #     self.do_blending = True
 
 
     def setAttributes(self, data):
         self.dataLen = data.shape[0]
         # Make this buffer the default one
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-
+        
         # Upload data
         gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
 
-        stride = data.strides[0]
+        offset = 0 
+        for i, name in enumerate(data.dtype.names):
+            stride = data.strides[0]
+            import ipdb; ipdb.set_trace()
+            loc = gl.glGetAttribLocation(self.program, name)
+            gl.glEnableVertexAttribArray(loc)
+            
+            gl.glVertexAttribPointer(loc, 3, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
 
-        offset = ctypes.c_void_p(0)
-        loc = gl.glGetAttribLocation(self.program, "a_position")
-        gl.glEnableVertexAttribArray(loc)
-        
-        gl.glVertexAttribPointer(loc, 3, gl.GL_FLOAT, False, stride, offset)
-
-        # offset = ctypes.c_void_p(data.dtype["position"].itemsize)
+            offset += data.dtype[name].itemsize
         # loc = gl.glGetAttribLocation(self.program, "color")
         # gl.glEnableVertexAttribArray(loc)
         # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)

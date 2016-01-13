@@ -192,14 +192,12 @@ class PointVis():
             self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
             # self.data_center = 0,0,0
 
-        # vbo = gloo.VertexBuffer(data)
-
         if zrange is not None:
              zmin, zmax = zrange
         else:
             zmin, zmax = min_xy[2], max_xy[2]
         for option in opts:
-            program = PointShaderProgram(zrange=(zmin, zmax), options = option)
+            program = PointShaderProgram(zrange=(zmin, zmax), option = option)
             program.setUniform('u_model', self.model)
             program.setUniform('u_view', self.view)
             program.setUniform('u_projection', self.projection)

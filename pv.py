@@ -53,9 +53,9 @@ if __name__ == '__main__':
 
     c.add_data_source(
         # opts=(['with_normals', 'with_point_radius', 'splat_disk'], ['with_normals', 'splat_disk']),
-        opts=('fixed_point',),
+        opts=('with_normals',),
         # opts=(['with_normals'],['with_normals', 'splat_disk'],['with_normals', 'splat_disk', 'with_point_radius'],),
-        points=datadict['coords'])
+        points=datadict['coords'], normals=datadict['normals'])
         # points=datadict['coords'], normals=datadict['normals'], radii=datadict['lfs'])
     
     c.on_initialize()
