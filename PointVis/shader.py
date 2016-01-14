@@ -42,7 +42,7 @@ class SimpleShaderProgram(object):
     def setAttributes(self, data):
         self.dataLen = data.shape[0]
         # Make this buffer the default one
-        print self.program, self.buffer, data.dtype
+        # print self.program, self.buffer, data.dtype
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         
         # Upload data
@@ -53,8 +53,7 @@ class SimpleShaderProgram(object):
             stride = data[name].strides[0]
             size = data[name].shape[1]
             loc = gl.glGetAttribLocation(self.program, name)
-            print offset, size, stride, loc
-            # if loc != -1:
+
             gl.glEnableVertexAttribArray(loc)
             gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
             offset += data.dtype[name].itemsize
@@ -76,6 +75,7 @@ class SimpleShaderProgram(object):
     def draw(self):
         if self.is_visible:
             gl.glUseProgram(self.program)
+            self.setAttributes(self.data)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
             gl.glDrawArrays(self.draw_type, 0, self.dataLen)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)

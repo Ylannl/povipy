@@ -56,45 +56,45 @@ if __name__ == '__main__':
 
     c.add_data_source(
         # opts=(['with_normals', 'with_point_radius', 'splat_disk'], ['with_normals', 'splat_disk']),
-        mode=('fixed_point'),
+        mode=('with_normals'),
         # opts=(['with_normals'],['with_normals', 'splat_disk'],['with_normals', 'splat_disk', 'with_point_radius'],),
-        points=datadict['coords'])
+        points=datadict['coords'], normals=datadict['normals'])
         # points=datadict['coords'], normals=datadict['normals'], radii=datadict['lfs'])
 
-    # if 'ma_coords_in' in available_keys:
-    #     c.add_data_source(
-    #         mode = 'splat_point',
-    #         # options = 'blend'
-    #         points=datadict['ma_coords_in']
-    #     )
+    if 'ma_coords_in' in available_keys:
+        c.add_data_source(
+            mode = 'fixed_point',
+            # options = 'blend'
+            points=datadict['ma_coords_in']
+        )
 
-    # if 'ma_coords_out' in available_keys:
-    #     c.add_data_source(
-    #         mode = 'splat_point',
-    #         # options = 'blend'
-    #         points=datadict['ma_coords_out']
-    #     )
+    if 'ma_coords_out' in available_keys:
+        c.add_data_source(
+            mode = 'fixed_point',
+            # options = 'blend'
+            points=datadict['ma_coords_out']
+        )
 
     c.add_data_source_line(
         coords_start = datadict['ma_coords_in'],
         coords_end = ma_bisec#(f1+f2)+datadict['ma_coords_in']
     )
-    # c.add_data_source_line(
-    #     coords_start = datadict['ma_coords_in'],
-    #     coords_end = datadict['coords']
-    # )
-    # c.add_data_source_line(
-    #     coords_start = datadict['coords'][datadict['ma_qidx_in']],
-    #     coords_end = datadict['ma_coords_in']
-    # )
-    # c.add_data_source_line(
-    #     coords_start = datadict['ma_coords_out'],
-    #     coords_end = datadict['coords']
-    # )
-    # c.add_data_source_line(
-    #     coords_start = datadict['coords'][datadict['ma_qidx_out']],
-    #     coords_end = datadict['ma_coords_out']
-    # )
+    c.add_data_source_line(
+        coords_start = datadict['ma_coords_in'],
+        coords_end = datadict['coords']
+    )
+    c.add_data_source_line(
+        coords_start = datadict['coords'][datadict['ma_qidx_in']],
+        coords_end = datadict['ma_coords_in']
+    )
+    c.add_data_source_line(
+        coords_start = datadict['ma_coords_out'],
+        coords_end = datadict['coords']
+    )
+    c.add_data_source_line(
+        coords_start = datadict['coords'][datadict['ma_qidx_out']],
+        coords_end = datadict['ma_coords_out']
+    )
 
     
     c.on_initialize()
