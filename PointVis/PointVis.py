@@ -107,7 +107,7 @@ class PointVis():
         self.radius = 0.5 * min(*size)
         self.fov = 5.
         self.camera_position = -12.
-        self.near_clip = 2.
+        self.near_clip = 1.
         self.far_clip = 100.
 
         self.draw_hud = False
@@ -125,7 +125,6 @@ class PointVis():
     def on_initialize(self):
         self.set_bg()
         gl.glDepthFunc(gl.GL_LESS)
-        # gloo.set_depth_func('less')
 
         view_width, view_height = map( lambda x:x/self.radius, self.size )
 
@@ -146,13 +145,10 @@ class PointVis():
         while not glfw.window_should_close(self.window):
             # Render here, e.g. using pyOpenGL
             self.on_draw()
-
             # Swap front and back buffers
             glfw.swap_buffers(self.window)
-
             # Poll for and process events
             glfw.wait_events()
-
         glfw.terminate()
 
     def add_data_source(self, mode, points, normals=None, radii=None, intensity=None, zrange=None):
@@ -204,6 +200,23 @@ class PointVis():
             # program.setUniform('u_screen_width', self.size[0])
         program.setAttributes(data)
         self.data_programs.append( program )
+
+    def add_data_source_line(self, coords_start, coords_end, color=(1,0,0)):
+        #interleave coordinates
+        m,n = coords_start.shape
+        vertices = np.empty((m*2,n), dtype=coords_start.dtype)
+        vertices[0::2] = coords_start
+        vertices[1::2] = coords_end
+      
+        data = np.empty( 2*m, [('a_position', np.float32, 3)] )
+        data['a_position'] = vertices
+
+        program = LineShaderProgram(color)
+        program.setUniform('u_model', self.model)
+        program.setUniform('u_view', self.view)
+        program.setUniform('u_projection', self.projection)
+        program.setAttributes(data)
+        self.data_programs.append( program )       
 
     def add_data_source_ball(self, points, radii, color=(0,1,0)):
         program = BallShaderProgram(points, radii, color)
@@ -271,11 +284,11 @@ class PointVis():
         elif key == glfw.KEY_MINUS and action == glfw.PRESS:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']-1.)
         elif key == glfw.KEY_EQUAL and action == glfw.PRESS:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']+1.)
         elif key == glfw.KEY_T and action == glfw.PRESS:
             self.rotation = q.quaternion()
             self.update_view_matrix()
@@ -299,43 +312,6 @@ class PointVis():
             if i < len(self.data_programs):
                 self.data_programs[i].toggle_visibility()
         self.update()
-
-    # def on_timer(self, event):
-    #     self.data_programs['coords_splat']['u_point_size']
-    #     self.update()
-
-    def capture_viewpoint_params(self):
-        t = np.array([ [self.translation[0]-self.data_center[0]], [self.translation[1]-self.data_center[1]], [self.translation[2]-self.data_center[2]] ])
-
-
-        p0_ = (np.array([[0],[0],[0]]) + self.data_center - self.translation)
-        vx_ = ( np.array([[0],[1],[0]]) ) / self.scale 
-        vy_ = ( np.array([[1],[0],[0]]) ) / self.scale 
-
-        
-        # self.view = np.eye(4, dtype=np.float32)
-        # translate(self.view, self.translation[0], self.translation[1], self.translation[2] )
-        # scale(self.view, self.scale, self.scale, self.scale)
-        # self.view = self.view.dot( np.array(q.matrix(self.rotation), dtype=np.float32) )
-        # # translate(self.view, -self.translation[0], -self.translation[1], -self.translation[2] )
-        # translate(self.view, 0,0, self.camera_position)
-
-        # print self.model
-        # print self.view
-        rot_mat = q.matrix33((self.rotation))
-        # print rot_mat
-        self.viewpoint_dict['viewpoint'] = np.array(np.dot(np.array(rot_mat, dtype=np.float32), (p0_)  ), dtype=np.float32)
-        # self.viewpoint_dict['viewpoint'] = np.array(np.dot(np.array(rot_mat, dtype=np.float32), (p0_) + np.array([0,0,self.camera_position]) ), dtype=np.float32)
-        self.viewpoint_dict['view_x'] = np.array(np.dot(-np.array(rot_mat, dtype=np.float32), (vx_) ), dtype=np.float32)
-        self.viewpoint_dict['view_y'] = np.array(np.dot(-np.array(rot_mat, dtype=np.float32), (vy_) ), dtype=np.float32)
-        # print np.dot(self.view, (vx_) ) 
-        # print np.dot(self.view, (vy_) ) 
-        # print np.dot(self.view, self.model).dot(p0_)
-
-        # if self.call_func not None:
-        self.mv.set_viewparam(**self.viewpoint_dict)
-        self.call_func(self.mv)
-
 
     def on_resize(self, window, size_x, size_y):
         gl.glViewport(int(0), int(0), int(size_x), int(size_y))
@@ -423,7 +399,6 @@ class PointVis():
         self.on_draw()
 
     def on_draw(self):
-
         bits = 0
         bits |= gl.GL_COLOR_BUFFER_BIT
         bits |= gl.GL_DEPTH_BUFFER_BIT
@@ -442,6 +417,7 @@ class PointVis():
             else:
                 gl.glDisable(gl.GL_BLEND)
             program.draw()
+
             # if program.draw_type == 'triangles':
                 # gloo.set_state(color_mask=(0,0,0,0))
                 # program.draw(program.draw_type, program.indexbuffer)

@@ -42,6 +42,7 @@ class SimpleShaderProgram(object):
     def setAttributes(self, data):
         self.dataLen = data.shape[0]
         # Make this buffer the default one
+        print self.program, self.buffer, data.dtype
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         
         # Upload data
@@ -52,9 +53,10 @@ class SimpleShaderProgram(object):
             stride = data[name].strides[0]
             size = data[name].shape[1]
             loc = gl.glGetAttribLocation(self.program, name)
-            if loc != -1:
-                gl.glEnableVertexAttribArray(loc)
-                gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
+            print offset, size, stride, loc
+            # if loc != -1:
+            gl.glEnableVertexAttribArray(loc)
+            gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
             offset += data.dtype[name].itemsize
 
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
@@ -83,9 +85,33 @@ class SimpleShaderProgram(object):
         self.is_visible = not self.is_visible
     
     def vertex_str(self):
-        return ""
-    def fragment_str(self):
-        return ""
+        return """
+        #version 120
+
+        // Uniforms
+        // ------------------------------------
+        uniform mat4 u_model;
+        uniform mat4 u_view;
+        uniform mat4 u_projection;
+
+        // Attributes
+        // ------------------------------------
+        attribute vec3  a_position;
+
+        void main (void) {{
+            gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);    
+        }}
+        """
+
+    def fragment_str(self, color=(1.,0.,0.)):
+        return """
+        varying vec4 v_color;
+
+        void main()
+        {{
+            gl_FragColor =  vec4({0}, {1}, {2}, 1);
+        }}
+        """.format(color[0], color[1], color[2])
 
 ### triangle shader:
 
@@ -199,16 +225,17 @@ class SimpleShaderProgram(object):
 
 ### point shader:
 
-all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
+
 
 class PointShaderProgram(SimpleShaderProgram):
-
+    _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
+    
     def __init__(self, mode='fixed_point', **options):
         self.zmin, self.zmax = options['zrange']
 
         self.defines = ""
         # for option in options:
-        if mode in all_modes:
+        if mode in self._all_modes:
             self.defines += "#define {}\n".format(mode)
         # import ipdb; ipdb.set_trace()
         self.attributes = ""
@@ -384,4 +411,24 @@ class PointShaderProgram(SimpleShaderProgram):
         }}
         """.format(defines=self.defines)
 
+### line shader:
+
+class LineShaderProgram(SimpleShaderProgram):
+
+    def __init__(self, color=(1,0,0)):
+        self.do_blending = False
+        self.color = color
+
+        # self.zmin, self.zmax = zrange
+
+        # self.defines = ""
+        # for option in options:
+        #     if option in all_options:
+        #         self.defines += "#define {}\n".format(option)
+
+        # if 'with_intensity' in options:
+        #     self.attributes += "attribute float a_intensity;\n"
+
+
+        super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES)
 
