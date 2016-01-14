@@ -155,8 +155,7 @@ class PointVis():
 
         glfw.terminate()
 
-        
-    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, zrange=None):
+    def add_data_source(self, mode, points, normals=None, radii=None, intensity=None, zrange=None):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
 
@@ -196,15 +195,15 @@ class PointVis():
              zmin, zmax = zrange
         else:
             zmin, zmax = min_xy[2], max_xy[2]
-        for option in opts:
-            program = PointShaderProgram(zrange=(zmin, zmax), option = option)
-            program.setUniform('u_model', self.model)
-            program.setUniform('u_view', self.view)
-            program.setUniform('u_projection', self.projection)
-            # if program.draw_type == 'points':
-                # program.setUniform('u_screen_width', self.size[0])
-            program.setAttributes(data)
-            self.data_programs.append( program )
+        # for mode in modes:
+        program = PointShaderProgram(mode=mode, zrange=(zmin, zmax))
+        program.setUniform('u_model', self.model)
+        program.setUniform('u_view', self.view)
+        program.setUniform('u_projection', self.projection)
+        # if program.draw_type == 'points':
+            # program.setUniform('u_screen_width', self.size[0])
+        program.setAttributes(data)
+        self.data_programs.append( program )
 
     def add_data_source_ball(self, points, radii, color=(0,1,0)):
         program = BallShaderProgram(points, radii, color)
@@ -271,14 +270,12 @@ class PointVis():
             self.update_projection_matrix()
         elif key == glfw.KEY_MINUS and action == glfw.PRESS:
             for program in self.data_programs:
-                if program.is_visible and program.draw_type == 'points':
-                    program['u_point_size'] /= 1.2
-            # self.data_programs[self.current_data_program]['u_point_size'] /= 1.2
+                if program.is_visible and program.draw_type == gl.GL_POINTS:
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == glfw.KEY_EQUAL and action == glfw.PRESS:
             for program in self.data_programs:
-                if program.is_visible and program.draw_type == 'points':
-                    program['u_point_size'] *= 1.2
-            # self.data_programs[self.current_data_program]['u_point_size'] *= 1.2
+                if program.is_visible and program.draw_type == gl.GL_POINTS:
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == glfw.KEY_T and action == glfw.PRESS:
             self.rotation = q.quaternion()
             self.update_view_matrix()
@@ -353,34 +350,35 @@ class PointVis():
         # x,y = event.pos
         # x -= self.size[0]/2
         # y += self.size[1]/2
-        if glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL) and glfw.get_key(self.window, glfw.KEY_LEFT_ALT):
+        if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
+            print 'farnear'
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 10
+                ticks /= 30
             self.camera_position -= ticks
             self.update_view_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL):
+        elif glfw.get_key(self.window, glfw.KEY_Z):
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 10
+                ticks /= 30
             new = max(0.1,self.near_clip - ticks)
             if new <= self.far_clip:
                 self.near_clip = new
                 self.update_projection_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_LEFT_ALT):
+        elif glfw.get_key(self.window, glfw.KEY_A):
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 10
+                ticks /= 30
             new = min(1000,self.far_clip - ticks)
             if new >= self.near_clip:
                 self.far_clip = new
                 self.update_projection_matrix()
-        # elif glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-        #     if self.projection_mode == 'perspective':
-        #         old_fov = self.fov
-        #         # do `dolly zooming` so that world appears at same size after canging fov
-        #         self.fov = max(5.,self.fov + ticks)
-        #         self.fov = min(120.,self.fov)
-        #         self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
-        #         self.update_projection_matrix()
-        #         self.update_view_matrix()
+        elif glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+            if self.projection_mode == 'perspective':
+                old_fov = self.fov
+                # do `dolly zooming` so that world appears at same size after canging fov
+                self.fov = max(5.,self.fov + ticks)
+                self.fov = min(120.,self.fov)
+                self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
+                self.update_projection_matrix()
+                self.update_view_matrix()
         else:
             self.scale *= ticks/10 + 1.
             # self.camera_position += ticks/10
@@ -434,26 +432,20 @@ class PointVis():
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         
         for program in self.data_programs:
-            if program.is_visible:
-                # print "drawing"
-                if program.do_blending:
-                    if self.bg_white:
-                        #gloo.set_state( blend=True, blend_func=('src_alpha', 'src_alpha') )
-                        gl.glEnable(gl.GL_BLEND)
-                        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_SRC_ALPHA)
-                    else:
-                        gl.glEnable(gl.GL_BLEND)
-                        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
-                        #gloo.set_state( blend=True, blend_func=('src_alpha', 'one') )
-                        # gloo.set_state( blend=True, blend_func=('one', 'one_minus_src_alpha') )
+            if program.do_blending:
+                if self.bg_white:
+                    gl.glEnable(gl.GL_BLEND)
+                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_SRC_ALPHA)
                 else:
-                    gl.glDisable(gl.GL_BLEND)
-                if program.draw_type == 'points':
-                    program.draw()
-                elif program.draw_type == 'triangles':
-                    # gloo.set_state(color_mask=(0,0,0,0))
-                    program.draw(program.draw_type, program.indexbuffer)
-                    # gloo.set_state(color_mask=(1,1,1,1))
+                    gl.glEnable(gl.GL_BLEND)
+                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
+            else:
+                gl.glDisable(gl.GL_BLEND)
+            program.draw()
+            # if program.draw_type == 'triangles':
+                # gloo.set_state(color_mask=(0,0,0,0))
+                # program.draw(program.draw_type, program.indexbuffer)
+                # gloo.set_state(color_mask=(1,1,1,1))
         # self.data_programs[self.current_data_program].draw('points')
         # self.data_programs[0].draw('points')
         # self.data_programs[1].draw('points')

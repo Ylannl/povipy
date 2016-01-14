@@ -11,6 +11,82 @@ import ctypes
 
 import numpy as np
 
+class SimpleShaderProgram(object):
+    def __init__(self, draw_type=gl.GL_POINTS, is_visible=False):
+        self.draw_type = draw_type
+        self.is_visible = is_visible
+        self.initialise()
+        self.uniforms = {}
+
+    def initialise(self):
+        self.program = gl.glCreateProgram()
+        vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
+        fragment_shader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
+        
+        gl.glShaderSource(vertex_shader, self.vertex_str())
+        gl.glShaderSource(fragment_shader, self.fragment_str())
+
+        gl.glCompileShader(vertex_shader)
+        gl.glCompileShader(fragment_shader)
+
+        gl.glAttachShader(self.program, vertex_shader)
+        gl.glAttachShader(self.program, fragment_shader)
+        gl.glLinkProgram(self.program)
+
+        gl.glDetachShader(self.program, vertex_shader)
+        gl.glDetachShader(self.program, fragment_shader)
+
+        # Request a buffer slot from GPU
+        self.buffer = gl.glGenBuffers(1)
+
+    def setAttributes(self, data):
+        self.dataLen = data.shape[0]
+        # Make this buffer the default one
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+        
+        # Upload data
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
+
+        offset = 0
+        for i, name in enumerate(data.dtype.names):
+            stride = data[name].strides[0]
+            size = data[name].shape[1]
+            loc = gl.glGetAttribLocation(self.program, name)
+            if loc != -1:
+                gl.glEnableVertexAttribArray(loc)
+                gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
+            offset += data.dtype[name].itemsize
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+    def setUniform(self, name, data):
+        gl.glUseProgram(self.program)
+        loc = gl.glGetUniformLocation(self.program, name)
+        if loc != -1:
+            self.uniforms[name] = data
+            if type(data) == float:
+                # print 'setting',name,'to',data
+                gl.glUniform1f(loc, np.float32(data))
+            elif type(data) == np.ndarray and data.shape == (4,4):
+                gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, np.float32(data))
+        gl.glUseProgram(0)
+
+    def draw(self):
+        if self.is_visible:
+            gl.glUseProgram(self.program)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            gl.glDrawArrays(self.draw_type, 0, self.dataLen)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+            gl.glUseProgram(0)
+
+    def toggle_visibility(self):
+        self.is_visible = not self.is_visible
+    
+    def vertex_str(self):
+        return ""
+    def fragment_str(self):
+        return ""
+
 ### triangle shader:
 
 # class BallShaderProgram(gloo.Program):
@@ -57,7 +133,7 @@ import numpy as np
 
 #         # self.defines = ""
 #         # for option in options:
-#         #     if option in all_options:
+#         #     if option in all_modes:
 #         #         self.defines += "#define {}\n".format(option)
 
 #         # self.attributes = ""
@@ -123,106 +199,36 @@ import numpy as np
 
 ### point shader:
 
-all_options = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
+all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
 
-class PointShaderProgram(object):
+class PointShaderProgram(SimpleShaderProgram):
 
-    def __init__(self, zrange, option):
-        self.draw_type = 'points'
-        self.is_visible = False
-        self.zmin, self.zmax = zrange
+    def __init__(self, mode='fixed_point', **options):
+        self.zmin, self.zmax = options['zrange']
 
         self.defines = ""
         # for option in options:
-        if option in all_options:
-            self.defines += "#define {}\n".format(option)
+        if mode in all_modes:
+            self.defines += "#define {}\n".format(mode)
         # import ipdb; ipdb.set_trace()
         self.attributes = ""
-        if 'with_normals' == option:
+        if 'with_normals' == mode:
             self.attributes += "attribute vec3 a_normal;\n"
-        if 'with_point_radius' == option:
+        if 'with_point_radius' == mode:
             self.attributes += "attribute float a_splat_radius;\n"
-        if 'with_intensity' == option:
+        if 'with_intensity' == mode:
             self.attributes += "attribute float a_intensity;\n"
 
-        self.program = gl.glCreateProgram()
-        vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
-        fragment_shader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
-        
-        gl.glShaderSource(vertex_shader, self.vertex_str())
-        gl.glShaderSource(fragment_shader, self.fragment_str())
+        super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
 
-        gl.glCompileShader(vertex_shader)
-        gl.glCompileShader(fragment_shader)
-
-        gl.glAttachShader(self.program, vertex_shader)
-        gl.glAttachShader(self.program, fragment_shader)
-        gl.glLinkProgram(self.program)
-
-        gl.glDetachShader(self.program, vertex_shader)
-        gl.glDetachShader(self.program, fragment_shader)
-
-
-        # Request a buffer slot from GPU
-        self.buffer = gl.glGenBuffers(1)
-
-        self.setUniform1f('u_point_size', 3.0)
-        if 'with_point_radius' in option:
-            self.setUniform1f('u_point_size', 300.0)
+        self.setUniform('u_point_size', 3.0)
+        if 'with_point_radius' == mode:
+            self.setUniform('u_point_size', 300.0)
 
         self.do_blending = False
         # if 'blend' in option:
         #     self.do_blending = True
 
-
-    def setAttributes(self, data):
-        self.dataLen = data.shape[0]
-        # Make this buffer the default one
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        
-        # Upload data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
-
-        offset = 0 
-        for i, name in enumerate(data.dtype.names):
-            stride = data.strides[0]
-            import ipdb; ipdb.set_trace()
-            loc = gl.glGetAttribLocation(self.program, name)
-            gl.glEnableVertexAttribArray(loc)
-            
-            gl.glVertexAttribPointer(loc, 3, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
-
-            offset += data.dtype[name].itemsize
-        # loc = gl.glGetAttribLocation(self.program, "color")
-        # gl.glEnableVertexAttribArray(loc)
-        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        # gl.glVertexAttribPointer(loc, 4, gl.GL_FLOAT, False, stride, offset)
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
-    def setUniform1f(self, name, data):
-        gl.glUseProgram(self.program)
-        loc = gl.glGetUniformLocation(self.program, name)
-        gl.glUniform1f(loc, data)
-        gl.glUseProgram(0)
-
-    def setUniform(self, name, data):
-        gl.glUseProgram(self.program)
-        loc = gl.glGetUniformLocation(self.program, name)
-        # import ipdb; ipdb.set_trace()
-        gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, data)
-        gl.glUseProgram(0)
-
-    def draw(self):
-        gl.glUseProgram(self.program)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        gl.glDrawArrays(gl.GL_POINTS, 0, self.dataLen)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        gl.glUseProgram(0)
-
-    def toggle_visibility(self):
-        self.is_visible = not self.is_visible
-    
     def vertex_str(self):
         return """
         #version 120
