@@ -198,8 +198,6 @@ class App(object):
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
-        if program.draw_type == gl.GL_POINTS:
-            program.setUniform('u_screen_width', self.size[0])
         program.setAttributes(data)
         self.data_programs.append( program )
 
@@ -249,10 +247,6 @@ class App(object):
 
     def update_projection_matrix(self):
         view_width, view_height = map( lambda x:x/self.radius, self.size )
-
-        for program in self.data_programs:
-            if program.draw_type==gl.GL_POINTS:
-                program.setUniform('u_screen_width', min(view_width, view_height))
 
         if self.projection_mode == 'orthographic':
             self.projection = ortho(-view_width, view_width, -view_height, view_height, self.near_clip, self.far_clip)
@@ -423,7 +417,7 @@ class App(object):
                     gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_SRC_ALPHA)
                 else:
                     gl.glEnable(gl.GL_BLEND)
-                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
+                    gl.glBlendFunc(gl.GL_ONE, gl.GL_SRC_ALPHA)
             else:
                 gl.glDisable(gl.GL_BLEND)
             program.draw()

@@ -131,6 +131,7 @@ class PointShaderProgram(SimpleShaderProgram):
     def __init__(self, options=['fixed_point'], **kwargs):
         self.zmin, self.zmax = kwargs['zrange']
 
+        options += ['with_texture']
         self.defines = ""
         for option in options:
             if option in self._all_modes:
@@ -155,18 +156,39 @@ class PointShaderProgram(SimpleShaderProgram):
         if 'blend' in option:
             self.do_blending = True
 
-    def createTexture(self):
+        self.texture = self.create_colormap()
+
+    def create_colormap(self):
         texture = gl.glGenTextures(1)
+        gl.glActiveTexture(gl.GL_TEXTURE0)
         gl.glBindTexture(gl.GL_TEXTURE_1D, texture);
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE);
+        
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         
         # Load and generate the texture
-        width = 20
+        width = 32
         image = np.random.rand(width,3).astype(np.float32)
-        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
-
+        # image = np.ones((width,3)).astype(np.float32)
+        # image = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=np.float32)
+        # width = 3
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
         gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
 
         return texture
+
+    def draw(self):
+        if self.is_visible:
+            # self.setAttributes(self.data)
+            gl.glUseProgram(self.program)
+            gl.glActiveTexture(gl.GL_TEXTURE0)
+            gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);
+            gl.glBindVertexArray(self.VAO)
+            gl.glDrawArrays(self.draw_type, 0, self.dataLen)
+            gl.glBindVertexArray(0)
+            gl.glUseProgram(0)
 
     def vertex_str(self):
         return """
@@ -242,6 +264,10 @@ class PointShaderProgram(SimpleShaderProgram):
 
         {defines}
 
+
+        uniform sampler1D u_color_ramp;
+
+
         // Constants
         // ------------------------------------
 
@@ -304,7 +330,9 @@ class PointShaderProgram(SimpleShaderProgram):
             #endif
 
             float c = 1.0 - (pow(2*x,2.0) + pow(2*x,2.0));
-            color =  vec4(color_scheme(v_color_intensity), alpha);
+            //color =  vec4(color_scheme(v_color_intensity), alpha);
+            //#else if defined(with_texture)
+            color =  texture(u_color_ramp, v_color_intensity);
             gl_FragDepth = gl_FragCoord.z + 0.002*(1.0-pow(c, 1.0)) * gl_FragCoord.w;
             
         }}
