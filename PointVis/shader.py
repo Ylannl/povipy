@@ -19,15 +19,19 @@ class SimpleShaderProgram(object):
         self.uniforms = {}
 
     def initialise(self):
+        def compileShader(handle, shader_source):
+            gl.glShaderSource(handle, shader_source)
+            gl.glCompileShader(handle)
+            # import ipdb; ipdb.set_trace()
+            if not gl.glGetShaderiv(handle, gl.GL_COMPILE_STATUS):
+                print gl.glGetShaderInfoLog(handle)
+
         self.program = gl.glCreateProgram()
         vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
         fragment_shader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
         
-        gl.glShaderSource(vertex_shader, self.vertex_str())
-        gl.glShaderSource(fragment_shader, self.fragment_str())
-
-        gl.glCompileShader(vertex_shader)
-        gl.glCompileShader(fragment_shader)
+        compileShader(vertex_shader, self.vertex_str())
+        compileShader(fragment_shader, self.fragment_str())
 
         gl.glAttachShader(self.program, vertex_shader)
         gl.glAttachShader(self.program, fragment_shader)
@@ -65,8 +69,7 @@ class SimpleShaderProgram(object):
         loc = gl.glGetUniformLocation(self.program, name)
         if loc != -1:
             self.uniforms[name] = data
-            if type(data) == float:
-                # print 'setting',name,'to',data
+            if type(data) in [float, np.float64, np.float32]:
                 gl.glUniform1f(loc, np.float32(data))
             elif type(data) == np.ndarray and data.shape == (4,4):
                 gl.glUniformMatrix4fv(loc, 1, gl.GL_FALSE, np.float32(data))
@@ -230,31 +233,44 @@ class SimpleShaderProgram(object):
 class PointShaderProgram(SimpleShaderProgram):
     _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
     
-    def __init__(self, mode='fixed_point', **options):
-        self.zmin, self.zmax = options['zrange']
+    def __init__(self, options=['fixed_point'], **kwargs):
+        self.zmin, self.zmax = kwargs['zrange']
 
         self.defines = ""
-        # for option in options:
-        if mode in self._all_modes:
-            self.defines += "#define {}\n".format(mode)
+        for option in options:
+            if option in self._all_modes:
+                self.defines += "#define {}\n".format(option)
         # import ipdb; ipdb.set_trace()
         self.attributes = ""
-        if 'with_normals' == mode:
+        if 'with_normals' in options:
             self.attributes += "attribute vec3 a_normal;\n"
-        if 'with_point_radius' == mode:
+        if 'with_point_radius' in options:
             self.attributes += "attribute float a_splat_radius;\n"
-        if 'with_intensity' == mode:
+        if 'with_intensity' in options:
             self.attributes += "attribute float a_intensity;\n"
 
         super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
 
         self.setUniform('u_point_size', 3.0)
-        if 'with_point_radius' == mode:
+        if 'with_point_radius' in options:
             self.setUniform('u_point_size', 300.0)
 
         self.do_blending = False
-        # if 'blend' in option:
-        #     self.do_blending = True
+        if 'blend' in option:
+            self.do_blending = True
+
+    def createTexture(self):
+        texture = gl.glGenTextures(1)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, texture);
+        
+        # Load and generate the texture
+        width = 20
+        image = np.random.rand(width,3).astype(np.float32)
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
+
+        gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
+
+        return texture
 
     def vertex_str(self):
         return """

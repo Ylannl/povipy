@@ -89,8 +89,6 @@ class PointVis():
         glfw.set_scroll_callback(self.window, self.on_mouse_wheel)
         glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
         # glfw.set_window_close_callback(self.window, self._on_close)
-        
-# 
 
         # self.hud_program = gloo.Program(cross_vert, cross_frag)
         # self.hud_program.bind(gloo.VertexBuffer(hud_data))
@@ -155,7 +153,7 @@ class PointVis():
             glfw.wait_events()
         glfw.terminate()
 
-    def add_data_source(self, mode, points, normals=None, radii=None, intensity=None, zrange=None):
+    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, zrange=None):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
 
@@ -196,12 +194,12 @@ class PointVis():
         else:
             zmin, zmax = min_xy[2], max_xy[2]
         # for mode in modes:
-        program = PointShaderProgram(mode=mode, zrange=(zmin, zmax))
+        program = PointShaderProgram(options=opts, zrange=(zmin, zmax))
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
-        # if program.draw_type == 'points':
-            # program.setUniform('u_screen_width', self.size[0])
+        if program.draw_type == gl.GL_POINTS:
+            program.setUniform('u_screen_width', self.size[0])
         program.data = data
         self.data_programs.append( program )
 
@@ -238,15 +236,15 @@ class PointVis():
         translate(self.view, 0,0, self.camera_position)
         for program in self.data_programs:
             program.setUniform('u_view', self.view)
-            # if program.draw_type == 'points':
-            #     program['u_model_scale'] = self.scale
+            if program.draw_type == gl.GL_POINTS:
+                program.setUniform('u_model_scale', self.scale)
 
     def update_projection_matrix(self):
         view_width, view_height = map( lambda x:x/self.radius, self.size )
 
-        # for program in self.data_programs:
-        #     if program.draw_type=='points':
-        #         program['u_screen_width'] = min(view_width, view_height)
+        for program in self.data_programs:
+            if program.draw_type==gl.GL_POINTS:
+                program.setUniform('u_screen_width', min(view_width, view_height))
 
         if self.projection_mode == 'orthographic':
             self.projection = ortho(-view_width, view_width, -view_height, view_height, self.near_clip, self.far_clip)
@@ -288,11 +286,11 @@ class PointVis():
         elif key == glfw.KEY_MINUS and action == glfw.PRESS:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']-1.)
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == glfw.KEY_EQUAL and action == glfw.PRESS:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']+1.)
+                    program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == glfw.KEY_T and action == glfw.PRESS:
             self.rotation = q.quaternion()
             self.update_view_matrix()

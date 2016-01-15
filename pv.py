@@ -56,22 +56,22 @@ if __name__ == '__main__':
 
     c.add_data_source(
         # opts=(['with_normals', 'with_point_radius', 'splat_disk'], ['with_normals', 'splat_disk']),
-        mode=('with_normals'),
+        opts=['adaptive_point', 'with_normals'],
         # opts=(['with_normals'],['with_normals', 'splat_disk'],['with_normals', 'splat_disk', 'with_point_radius'],),
         points=datadict['coords'], normals=datadict['normals'])
         # points=datadict['coords'], normals=datadict['normals'], radii=datadict['lfs'])
 
     if 'ma_coords_in' in available_keys:
         c.add_data_source(
-            mode = 'fixed_point',
-            # options = 'blend'
+            opts = ['adaptive_point', 'blend'],
+            # opts = 'blend'
             points=datadict['ma_coords_in']
         )
 
     if 'ma_coords_out' in available_keys:
         c.add_data_source(
-            mode = 'fixed_point',
-            # options = 'blend'
+            opts = ['adaptive_point', 'blend'],
+            # opts = 'blend'
             points=datadict['ma_coords_out']
         )
 
