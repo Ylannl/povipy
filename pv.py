@@ -2,7 +2,7 @@ from time import time
 import sys
 # from masbpy.io_ply import read_ply
 from pointio import io_npy
-from PointVis import PointVis
+from povi import App
 import numpy as np
 
 # INFILE = "/Users/ravi/git/masbpy/house_dyke_tree_npy"
@@ -15,7 +15,7 @@ import numpy as np
 INFILE = "/Users/ravi/Sync/Phd/subproject/hierarchy/segmentation/data/scan_npy"
 
 if __name__ == '__main__':
-    c = PointVis()
+    c = App()
     ma_min, ma_max = -1000, 1000
     if len(sys.argv) > 1:
         INFILE = sys.argv[1]
@@ -53,13 +53,16 @@ if __name__ == '__main__':
     ma_bisec = (f1+f2)
     ma_bisec = ma_bisec/np.linalg.norm(ma_bisec, axis=1)[:,None] + datadict['ma_coords_in']
     
-
     c.add_data_source(
         # opts=(['with_normals', 'with_point_radius', 'splat_disk'], ['with_normals', 'splat_disk']),
-        opts=['adaptive_point', 'with_normals'],
+        opts=['splat_disk', 'with_normals'],
         # opts=(['with_normals'],['with_normals', 'splat_disk'],['with_normals', 'splat_disk', 'with_point_radius'],),
         points=datadict['coords'], normals=datadict['normals'])
         # points=datadict['coords'], normals=datadict['normals'], radii=datadict['lfs'])
+
+    c.add_data_source(
+        opts=['adaptive_point', 'with_intensity'],
+        points=np.concatenate([datadict['ma_coords_in']]), intensity=datadict['ma_segment'].astype(np.float32))
 
     if 'ma_coords_in' in available_keys:
         c.add_data_source(

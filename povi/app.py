@@ -60,7 +60,7 @@ void main()
 
 # ------------------------------------------------------------ Canvas class ---
 
-class PointVis():
+class App(object):
 
     def __init__(self, call_func=None, mv=None):
         size = 720, 720
@@ -69,10 +69,10 @@ class PointVis():
         if not glfw.init():
             return
         # Create a windowed mode window and its OpenGL context
-        # glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        # glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        # glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
-        # glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
+        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         self.window = glfw.create_window(size[0], size[1], "PointVis", None, None)
         if not self.window:
             glfw.terminate()
@@ -200,11 +200,19 @@ class PointVis():
         program.setUniform('u_projection', self.projection)
         if program.draw_type == gl.GL_POINTS:
             program.setUniform('u_screen_width', self.size[0])
-        program.data = data
+        program.setAttributes(data)
         self.data_programs.append( program )
 
     def add_data_source_line(self, coords_start, coords_end, color=(1,0,0)):
         #interleave coordinates
+        min_xy = np.nanmin( coords_start, axis=0 )
+        max_xy = np.nanmax( coords_start, axis=0 )
+        if len(self.data_programs) == 0:
+            self.data_width = max_xy[0] - min_xy[0]
+            self.data_height = max_xy[1] - min_xy[1]
+            self.data_depth = max_xy[2] - min_xy[2]
+
+            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
         m,n = coords_start.shape
         vertices = np.empty((m*2,n), dtype=coords_start.dtype)
         vertices[0::2] = coords_start
@@ -217,7 +225,7 @@ class PointVis():
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
-        program.data = data
+        program.setAttributes(data)
         self.data_programs.append( program )       
 
     def add_data_source_ball(self, points, radii, color=(0,1,0)):
