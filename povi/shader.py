@@ -158,21 +158,23 @@ class PointShaderProgram(SimpleShaderProgram):
 
         self.texture = self.create_colormap()
 
-    def create_colormap(self):
+    def create_colormap(self, scheme='random'):
         texture = gl.glGenTextures(1)
         gl.glActiveTexture(gl.GL_TEXTURE0)
         gl.glBindTexture(gl.GL_TEXTURE_1D, texture);
         gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_CLAMP_TO_EDGE);
-        
-        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
-        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
+
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR);
         
         # Load and generate the texture
-        width = 32
-        image = np.random.rand(width,3).astype(np.float32)
-        # image = np.ones((width,3)).astype(np.float32)
-        # image = np.array([[1,0,0],[0,1,0],[0,0,1]], dtype=np.float32)
-        # width = 3
+        width = 256
+        if scheme == 'random':
+            image = np.random.rand(width,3).astype(np.float32)
+        else:
+            from colormaps import cm
+            image = np.array(cm[scheme], dtype=np.float32)
+
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
         gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
         gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
