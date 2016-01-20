@@ -148,7 +148,7 @@ class PointShaderProgram(SimpleShaderProgram):
 
         super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
 
-        self.setUniform('u_point_size', 3.0)
+        self.setUniform('u_point_size', 20.0)
         if 'with_point_radius' in options:
             self.setUniform('u_point_size', 300.0)
 
@@ -158,7 +158,7 @@ class PointShaderProgram(SimpleShaderProgram):
 
         self.texture = self.create_colormap()
 
-    def create_colormap(self, scheme='random'):
+    def create_colormap(self, scheme='jet'):
         texture = gl.glGenTextures(1)
         gl.glActiveTexture(gl.GL_TEXTURE0)
         gl.glBindTexture(gl.GL_TEXTURE_1D, texture);
@@ -283,30 +283,6 @@ class PointShaderProgram(SimpleShaderProgram):
         #endif
 
         out vec4 color;
-
-        // Jet color scheme
-        vec3 color_scheme(float x) {{
-            vec3 a, b;
-            float c;
-            if (x < 0.34) {{
-                a = vec3(0, 0, 0.5);
-                b = vec3(0, 0.8, 0.95);
-                c = (x - 0.0) / (0.34 - 0.0);
-            }} else if (x < 0.64) {{
-                a = vec3(0, 0.8, 0.95);
-                b = vec3(0.85, 1, 0.04);
-                c = (x - 0.34) / (0.64 - 0.34);
-            }} else if (x < 0.89) {{
-                a = vec3(0.85, 1, 0.04);
-                b = vec3(0.96, 0.7, 0);
-                c = (x - 0.64) / (0.89 - 0.64);
-            }} else {{
-                a = vec3(0.96, 0.7, 0);
-                b = vec3(0.5, 0, 0);
-                c = (x - 0.89) / (1.0 - 0.89);
-            }}
-            return vec3(v_lightpwr*mix(a, b, c));
-        }}
 
         // Main
         // ------------------------------------

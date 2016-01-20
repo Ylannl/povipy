@@ -33,17 +33,17 @@ if __name__ == '__main__':
     ma_bisec = ma_bisec/np.linalg.norm(ma_bisec, axis=1)[:,None] + datadict['ma_coords_in']
     
     c.add_data_source(
-        opts=['adaptive_point', 'with_normals'],
+        opts=['splat_disk', 'with_normals'],
         points=datadict['coords'], normals=datadict['normals']
     )
 
     c.add_data_source(
-        opts=['adaptive_point', 'with_intensity'],
+        opts=['splat_point', 'with_intensity'],
         points=np.concatenate([datadict['ma_coords_in']]), intensity=datadict['ma_segment'].astype(np.float32)
     )
     
     c.add_data_source(
-        opts = ['adaptive_point', 'blend'],
+        opts = ['splat_point', 'blend'],
         points=datadict['ma_coords_in']
     )
 
