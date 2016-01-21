@@ -100,5 +100,4 @@ if __name__ == '__main__':
     )
 
     
-    c.on_initialize()
     c.run()

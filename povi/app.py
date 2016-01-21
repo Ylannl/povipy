@@ -9,12 +9,7 @@
 # TODO: display other geometries, medial balls, lines to nn's etc
 
 # TODO: structure code
-# TODO: make it work with latest vispy
 # TODO: proper depth on HUD
-
-# FIXED: LAS reader
-# FIXED: layer system for different datasets 
-# FIXED: switch between different pointrendering shaders
 
 import numpy as np
 import math
@@ -25,40 +20,8 @@ import glfw
 from transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
 from linalg import quaternion as q
-from shader import *#PointShaderProgram, BallShaderProgram
+from shader import *
 
-
-hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
-hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]])
-
-cross_vert = """
-#version 120
-
-// Attributes
-// ------------------------------------
-attribute vec2  a_position;
-
-// Varyings
-// ------------------------------------
-//
-
-void main (void) {
-    gl_Position =  vec4(a_position, 0.0, 1.0);
-}
-"""
-
-cross_frag = """
-#version 120
-
-// Main
-// ------------------------------------
-void main()
-{
-    gl_FragColor = vec4(0.5,0.5,0.5,1.0);
-}
-"""
-
-# ------------------------------------------------------------ Canvas class ---
 
 class App(object):
 
@@ -73,7 +36,7 @@ class App(object):
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-        self.window = glfw.create_window(size[0], size[1], "PointVis", None, None)
+        self.window = glfw.create_window(size[0], size[1], "PoVi", None, None)
         if not self.window:
             glfw.terminate()
             return
@@ -90,8 +53,7 @@ class App(object):
         glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
         # glfw.set_window_close_callback(self.window, self._on_close)
 
-        # self.hud_program = gloo.Program(cross_vert, cross_frag)
-        # self.hud_program.bind(gloo.VertexBuffer(hud_data))
+        self.hud_program = CrossHairProgram()
 
         self.default_view = np.eye(4, dtype=np.float32)
         self.view = self.default_view
@@ -112,13 +74,10 @@ class App(object):
         self.near_clip = 1.
         self.far_clip = 100.
 
-        self.draw_hud = False
-
         self.projection_mode = 'perspective' # 'orthographic'
 
         # app.Canvas.__init__(self, keys='interactive')
         self.size = size
-        self.title = 'PointVis'
         self.bg_white = False
         self.mv = mv
         self.viewpoint_dict = {}
@@ -143,6 +102,7 @@ class App(object):
         self.on_resize(self.window, *self.size)
 
     def run(self):
+        self.on_initialize()
         # Loop until the user closes the window
         while not glfw.window_should_close(self.window):
             # Render here, e.g. using pyOpenGL
@@ -273,8 +233,6 @@ class App(object):
             # gloo.set_state('translucent', clear_color=np.array([0.15,0.15,0.15,1]) )
 
     def on_key_press(self, window, key, scancode, action, mods):
-        # import ipdb; ipdb.set_trace()
-        # if action == glfw.PRESS: print key, self.data_programs[0]['u_point_size']
         if key == glfw.KEY_R and action == glfw.PRESS:
             self.view = np.eye(4, dtype=np.float32)
             self.rotation = q.quaternion()
@@ -285,11 +243,11 @@ class App(object):
             self.far_clip = 100.
             self.update_view_matrix()
             self.update_projection_matrix()
-        elif key == glfw.KEY_MINUS and action == glfw.PRESS:
+        elif key == glfw.KEY_MINUS and action in [glfw.REPEAT, glfw.PRESS]:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
-        elif key == glfw.KEY_EQUAL and action == glfw.PRESS:
+        elif key == glfw.KEY_EQUAL and action in [glfw.REPEAT, glfw.PRESS]:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
@@ -307,10 +265,6 @@ class App(object):
             self.set_bg()
         elif key == glfw.KEY_V and action == glfw.PRESS:
             self.capture_viewpoint_params()
-        elif key == glfw.KEY_LEFT_BRACKET and action == glfw.PRESS:
-            self.current_data_program = (self.current_data_program-1) % len(self.data_programs)
-        elif key == glfw.KEY_RIGHT_BRACKET:
-            self.current_data_program = (self.current_data_program+1) % len(self.data_programs)
         elif glfw.KEY_0 <= key < glfw.KEY_9 and action == glfw.PRESS:
             i = int(chr(key))-1
             if i < len(self.data_programs):
@@ -327,11 +281,8 @@ class App(object):
 
     def on_mouse_wheel(self, window, offset_x, offset_y):
         ticks = offset_y
-        # x,y = event.pos
-        # x -= self.size[0]/2
-        # y += self.size[1]/2
+
         if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
-            print 'farnear'
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
                 ticks /= 30
             self.camera_position -= ticks
@@ -359,6 +310,9 @@ class App(object):
                 self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
                 self.update_projection_matrix()
                 self.update_view_matrix()
+        elif glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL):
+            self.camera_position += ticks/10
+            self.update_view_matrix()
         else:
             self.scale *= ticks/10 + 1.
             # self.camera_position += ticks/10
@@ -381,7 +335,7 @@ class App(object):
                 # this is not fully correct
                 self.translation += self.modelscale * np.array([dx, -dy, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
             
-            self.draw_hud = True
+            self.hud_program.is_visible = True
         elif glfw.get_mouse_button(self.window, glfw.MOUSE_BUTTON_LEFT):
             x0,y0 = self.screen2view(*self.last_mouse_pos)
             x1,y1 = self.screen2view(pos_x, pos_y)
@@ -391,9 +345,9 @@ class App(object):
 
             self.rotation = q.product(v1, v0, self.rotation)
 
-            self.draw_hud = True
+            self.hud_program.is_visible = True
         else:
-            self.draw_hud = False
+            self.hud_program.is_visible = False
         self.update_view_matrix()
         self.update()
 
@@ -430,31 +384,5 @@ class App(object):
         # self.data_programs[0].draw('points')
         # self.data_programs[1].draw('points')
         
-        # if self.draw_hud:
-        #     self.hud_program.draw('lines')
-        
-        
-
-
-# if __name__ == '__main__':
-    # c = PointVis()
-    
-    # t1=time()
-    # # datadict = read_ply(INFILE)
-    # datadict = io_npy.read_npy(INFILE, ['coords', 'normals', 'lfs', 'ma_coords_in', 'ma_radii_in', 'ma_coords_out', 'ma_radii_out'])
-    # # datadict = read_xyz('/Users/ravi/project/covadem/TUDelft-OTB/out/out_6.xyz_.xyz')
-    # t2=time()
-    # print "data loaded in {} s".format(t2-t1)
-
-    # c.add_data_source(
-    #     opts=(['with_normals', 'with_point_radius', 'splat_disk'], ['with_normals', 'splat_disk']),
-    #     points=datadict['coords'], normals=datadict['normals'], radii=datadict['lfs'])
-    # c.add_data_source(
-    #     opts = (['splat_point', 'blend'],),
-    #     points=datadict['ma_coords_in'])
-    # c.add_data_source(
-    #     opts = (['splat_point', 'blend'],),
-    #     points=datadict['ma_coords_out'])
-
-    # c.show()
-    # app.run()
+        if self.hud_program.is_visible:
+            self.hud_program.draw()

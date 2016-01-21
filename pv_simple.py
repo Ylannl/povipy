@@ -52,5 +52,4 @@ if __name__ == '__main__':
         coords_end = ma_bisec#(f1+f2)+datadict['ma_coords_in']
     )
     
-    c.on_initialize()
     c.run()
