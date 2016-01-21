@@ -113,7 +113,7 @@ class App(object):
             glfw.wait_events()
         glfw.terminate()
 
-    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, zrange=None):
+    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
 
@@ -154,7 +154,7 @@ class App(object):
         else:
             zmin, zmax = min_xy[2], max_xy[2]
         # for mode in modes:
-        program = PointShaderProgram(options=opts, zrange=(zmin, zmax))
+        program = PointShaderProgram(options=opts, zrange=(zmin, zmax), **kwargs)
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)

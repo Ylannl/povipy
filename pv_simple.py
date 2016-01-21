@@ -39,7 +39,8 @@ if __name__ == '__main__':
 
     c.add_data_source(
         opts=['splat_point', 'with_intensity'],
-        points=np.concatenate([datadict['ma_coords_in']]), intensity=datadict['ma_segment'].astype(np.float32)
+        points=np.concatenate([datadict['ma_coords_in']]), intensity=datadict['ma_segment'].astype(np.float32),
+        colormap='random'
     )
     
     c.add_data_source(

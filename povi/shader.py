@@ -124,35 +124,35 @@ class SimpleShaderProgram(object):
         """.format(color[0], color[1], color[2])
 
 class CrossHairProgram(SimpleShaderProgram):
-        hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
-        hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
+    hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
+    hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
 
-        def __init__(self):
-            super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
-            self.setAttributes(self.hud_data)
+    def __init__(self):
+        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
+        self.setAttributes(self.hud_data)
 
-        def vertex_str(self):
-            return """
-            #version 330
+    def vertex_str(self):
+        return """
+        #version 330
 
-            in vec2  a_position;
+        in vec2  a_position;
 
-            void main (void) {
-                gl_Position =  vec4(a_position, 0.0, 1.0);
-            }
-            """
+        void main (void) {
+            gl_Position =  vec4(a_position, 0.0, 1.0);
+        }
+        """
 
-        def fragment_str(self):
-            return """
-            #version 330
+    def fragment_str(self):
+        return """
+        #version 330
 
-            out vec4 color;
+        out vec4 color;
 
-            void main()
-            {
-                color = vec4(0.5,0.5,0.5,1.0);
-            }
-            """
+        void main()
+        {
+            color = vec4(0.5,0.5,0.5,1.0);
+        }
+        """
 
 class PointShaderProgram(SimpleShaderProgram):
     _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
@@ -185,7 +185,10 @@ class PointShaderProgram(SimpleShaderProgram):
         if 'blend' in options:
             self.do_blending = True
 
-        self.texture = self.create_colormap()
+        colormap = 'jet'
+        if kwargs.has_key('colormap'):
+            colormap = kwargs['colormap']
+        self.texture = self.create_colormap(scheme=colormap)
 
     def create_colormap(self, scheme='jet'):
         texture = gl.glGenTextures(1)
