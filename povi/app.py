@@ -285,8 +285,9 @@ class App(object):
         if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
                 ticks /= 30
-            self.camera_position -= ticks
-            self.update_view_matrix()
+            self.near_clip -= ticks
+            self.far_clip -= ticks
+            self.update_projection_matrix()
         elif glfw.get_key(self.window, glfw.KEY_Z):
             if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
                 ticks /= 30
@@ -317,7 +318,6 @@ class App(object):
             self.scale *= ticks/10 + 1.
             # self.camera_position += ticks/10
             self.update_view_matrix()
-        
         self.update()
 
     def on_mouse_move(self, window, pos_x, pos_y):
