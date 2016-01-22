@@ -203,6 +203,10 @@ class PointShaderProgram(SimpleShaderProgram):
         width = 256
         if scheme == 'random':
             image = np.random.rand(width,3).astype(np.float32)
+            image[0,:] = 1.
+            # gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT);
+            # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
+            # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         else:
             from colormaps import cm
             image = np.array(cm[scheme], dtype=np.float32)

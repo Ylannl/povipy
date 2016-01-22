@@ -113,7 +113,7 @@ class App(object):
             glfw.wait_events()
         glfw.terminate()
 
-    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, zrange=None, **kwargs):
+    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
 
@@ -130,6 +130,11 @@ class App(object):
         if intensity is not None:
             attribute_definitions.append(('a_intensity', np.float32, 1))
             intensity *= 1./np.nanmax(intensity)
+            # import pdb; pdb.set_trace()
+            data_list.append(intensity)
+        if category is not None:
+            attribute_definitions.append(('a_intensity', np.float32, 1))
+            intensity = (category%256)/256.
             # import pdb; pdb.set_trace()
             data_list.append(intensity)
 
@@ -251,6 +256,10 @@ class App(object):
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+        elif key == glfw.KEY_B and action == glfw.PRESS:
+            for program in self.data_programs:
+                if program.is_visible and program.draw_type == gl.GL_POINTS:
+                    program.do_blending = not program.do_blending
         elif key == glfw.KEY_T and action == glfw.PRESS:
             self.rotation = q.quaternion()
             self.update_view_matrix()
@@ -263,8 +272,6 @@ class App(object):
         elif key == glfw.KEY_L and action == glfw.PRESS:
             self.bg_white = not self.bg_white
             self.set_bg()
-        elif key == glfw.KEY_V and action == glfw.PRESS:
-            self.capture_viewpoint_params()
         elif glfw.KEY_0 <= key < glfw.KEY_9 and action == glfw.PRESS:
             i = int(chr(key))-1
             if i < len(self.data_programs):
