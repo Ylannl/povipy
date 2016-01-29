@@ -58,13 +58,13 @@ if __name__ == '__main__':
     datadict = io_npy.read_npy(INFILE)
     ma = MAHelper(datadict)
     # filt = ma.ma_radii < 190.
-    # import ipdb; ipdb.set_trace()
+    
     filt = np.logical_and(ma.ma_radii < 190., ma.ma_segment>0)
     # filt = ma.ma_segment>=0
     # filt = ma.ma_segment>0
     t2=time()
     print "data loaded in {} s".format(t2-t1)
-    
+    # import ipdb; ipdb.set_trace()
     c.add_data_source(
         opts=['splat_disk', 'with_normals'],
         points=ma.coords, normals=ma.normals
@@ -84,16 +84,16 @@ if __name__ == '__main__':
     )
 
     c.add_data_source_line(
-        coords_start = ma.ma_coords_in,
-        coords_end = ma.ma_bisec_in+ma.ma_coords_in
-    )
-    c.add_data_source_line(
-        coords_start = ma.ma_coords_out,
-        coords_end = ma.ma_bisec_out+ma.ma_coords_out
+        coords_start = ma.ma_coords,
+        coords_end = ma.ma_bisec+ma.ma_coords
     )
     c.add_data_source_line(
         coords_start = ma.ma_coords,
-        coords_end = ma.ma_bisec+ma.ma_coords
+        coords_end = np.concatenate([ma.coords,ma.coords])
+    )
+    c.add_data_source_line(
+        coords_start = ma.ma_coords,
+        coords_end = np.concatenate([ma.coords[ma.ma_qidx_in],ma.coords[ma.ma_qidx_out]])
     )
     
     c.run()
