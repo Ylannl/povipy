@@ -151,7 +151,7 @@ class App(object):
             self.data_height = max_xy[1] - min_xy[1]
             self.data_depth = max_xy[2] - min_xy[2]
 
-            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
+            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, 0#min_xy[2] + self.data_depth/2
             # self.data_center = 0,0,0
 
         if zrange is not None:

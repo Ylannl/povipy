@@ -20,6 +20,7 @@ if __name__ == '__main__':
     mi, ma = np.array(lasfile.header.min), np.array(lasfile.header.max)    
     count = lasfile.header.count
     offset = mi + (ma - mi)
+    offset[2] = 0
     print "{} points loaded from file in {} s".format(count, time()-t0)
     # import ipdb; ipdb.set_trace()
 
@@ -34,6 +35,20 @@ if __name__ == '__main__':
         colormap='terrain'
     )
     c.data_programs[0].toggle_visibility()
+
+    try:
+        intensity = lasfile.get_intensity().astype(np.float32)
+        intensity = np.clip(intensity, 0, 600)
+        if intensity.max() == 0: raise LaspyException
+        c.add_data_source(
+            opts=['splat_point', 'with_intensity'],
+            points=points[filt],
+            intensity=intensity[filt],
+            colormap='jet'
+        )
+    except LaspyException:
+        pass
+
 
     try:
         classification = lasfile.get_classification()
@@ -54,19 +69,6 @@ if __name__ == '__main__':
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             intensity=return_num[filt],
-            colormap='jet'
-        )
-    except LaspyException:
-        pass
-
-    try:
-        intensity = lasfile.get_intensity().astype(np.float32)
-        intensity = np.clip(intensity, 0, 600)
-        if intensity.max() == 0: raise LaspyException
-        c.add_data_source(
-            opts=['splat_point', 'with_intensity'],
-            points=points[filt],
-            intensity=intensity[filt],
             colormap='jet'
         )
     except LaspyException:
