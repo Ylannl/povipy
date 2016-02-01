@@ -1,10 +1,17 @@
 # import matplotlib.pyplot as plt
-# import numpy as np
+import numpy as np
 
 # for scheme in ['jet', 'terrain', 'RdYlGn']:
 # 	cm = plt.get_cmap(scheme)
 # 	np.set_printoptions(precision=5, threshold='nan', suppress=True, formatter={'float_kind': lambda x: '{:.4,},'.format(x)})
 # 	print scheme, '=', cm(np.arange(256))
+
+las_classes = np.ones((256,3), dtype=np.float32)
+las_classes[1] = np.array([178,223,138])/256.
+las_classes[2] = np.array([178,223,138])/256.
+las_classes[6] = np.array([227,26,28])/256.
+las_classes[9] = np.array([166,206,227])/256.
+las_classes[26] = np.array([255,127,0])/256.
 
 old_jet = [
  [ 0. ,  0. ,  0.5],
@@ -1034,4 +1041,4 @@ RdYlGn = [[0.6471, 0.0, 0.149],
  [0.003998, 0.4152, 0.2195],
  [0.0, 0.4078, 0.2157]]
 
-cm  = {'jet':old_jet, 'RdYlGn': RdYlGn, 'terrain': terrain}
+cm  = {'jet':old_jet, 'RdYlGn': RdYlGn, 'terrain': terrain, 'las_classes':las_classes}

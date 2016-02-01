@@ -231,7 +231,7 @@ class App(object):
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         if self.bg_white:
-            gl.glClearColor(1,1,1,1)
+            gl.glClearColor(0.85,0.85,0.85,1)
             # gloo.set_state('translucent', clear_color=np.array([1,1,1,1]) )
         else:
             gl.glClearColor(0.15,0.15,0.15,1)
