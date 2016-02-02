@@ -1,14 +1,9 @@
 # TODO: clipping planes fixed to data coordinates
 # TODO: different LODs/decimations
 
-# TODO: point picking. render point coordinates to texture... 
 # TODO: point selection
 # TODO: point attribute querying
-# TODO: colormap atribute data. using texture? or simple algebra?
-# TODO: display normals
-# TODO: display other geometries, medial balls, lines to nn's etc
 
-# TODO: structure code
 # TODO: proper depth on HUD
 
 import numpy as np
@@ -25,7 +20,26 @@ from shader import *
 
 class App(object):
 
-    def __init__(self, call_func=None, mv=None):
+    instructions = """
+--Key controls
+0-9     - toggle data layers
+r       - reset viewpoint to defaults
+t       - view from top
+l       - light/dark background
+=       - increase point size
+-       - decrease point size
+
+--Mouse controls
+drag            - rotate dataset (arcball)
+shift + move    - translate dataset
+scroll          - scale dataset
+shift + scroll  - change field of view
+a + scroll      - move far clipping plane (+ shift for more precision)
+z + scroll      - move near clipping plane (+ shift for more precision)
+a + z + scroll  - move far and near clipping plane simultaniously (+ shift for more precision)
+"""
+
+    def __init__(self):
         size = 720, 720
 
         # Initialize the library
@@ -71,17 +85,17 @@ class App(object):
         self.radius = 0.5 * min(*size)
         self.fov = 5.
         self.camera_position = -12.
-        self.near_clip = 1.
+        self.near_clip = .1
         self.far_clip = 100.
 
         self.projection_mode = 'perspective' # 'orthographic'
 
-        # app.Canvas.__init__(self, keys='interactive')
         self.size = size
         self.bg_white = False
-        self.mv = mv
         self.viewpoint_dict = {}
-        self.call_func = call_func
+
+        print(self.instructions)
+
 
     def on_initialize(self):
         self.set_bg()
@@ -391,14 +405,6 @@ class App(object):
             else:
                 gl.glDisable(gl.GL_BLEND)
             program.draw()
-
-            # if program.draw_type == 'triangles':
-                # gloo.set_state(color_mask=(0,0,0,0))
-                # program.draw(program.draw_type, program.indexbuffer)
-                # gloo.set_state(color_mask=(1,1,1,1))
-        # self.data_programs[self.current_data_program].draw('points')
-        # self.data_programs[0].draw('points')
-        # self.data_programs[1].draw('points')
         
         if self.hud_program.is_visible:
             self.hud_program.draw()

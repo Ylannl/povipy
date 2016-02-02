@@ -13,9 +13,6 @@ import click
 @click.option('-l', '--limit', default=3.0E6, type=float, help='Limits the number of points on screen.')
 def las(input, limit):
     # import ipdb; ipdb.set_trace()
-    c = App()
-    c.multiview = False
-    
     t0=time()
     lasfile = File(input)
     mi, ma = np.array(lasfile.header.min), np.array(lasfile.header.max)    
@@ -24,11 +21,13 @@ def las(input, limit):
     offset[2] = 0
     print "{} points loaded from file in {} s".format(count, time()-t0)
     
-
     filt = np.random.random(count) < (limit / count)
     thin_count = np.sum(filt)
     print "{} points remaining after thinning [factor: {:.2f}]".format(thin_count, float(thin_count)/count)
 
+    c = App()
+    c.multiview = False
+    
     points = np.stack((lasfile.get_x_scaled(), lasfile.get_y_scaled(), lasfile.get_z_scaled()), axis=1) - offset
     c.add_data_source(
         opts=['splat_point'],
