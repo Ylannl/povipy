@@ -1,30 +1,30 @@
 from time import time
 import sys
-from povi import App
-import numpy as np
 
+import numpy as np
+from povi import App
 from laspy.file import File
 from laspy.util import LaspyException
 
-INFILE = 'data/ahn3_zoetermeer_stadshart_small.laz'
+import click
 
-if __name__ == '__main__':
+@click.command(help='OpenGL visualiser for LAS files.')
+@click.argument('input', type=click.Path(exists=True))
+@click.option('-l', '--limit', default=3.0E6, type=float, help='Limits the number of points on screen.')
+def las(input, limit):
+    # import ipdb; ipdb.set_trace()
     c = App()
     
-    if len(sys.argv) > 1:
-        INFILE = sys.argv[1]
-    TARGET_PT_COUNT = 1.0E6
-
     t0=time()
-    lasfile = File(INFILE)
+    lasfile = File(input)
     mi, ma = np.array(lasfile.header.min), np.array(lasfile.header.max)    
     count = lasfile.header.count
     offset = mi + (ma - mi)
     offset[2] = 0
     print "{} points loaded from file in {} s".format(count, time()-t0)
-    # import ipdb; ipdb.set_trace()
+    
 
-    filt = np.random.random(count) < (TARGET_PT_COUNT / count)
+    filt = np.random.random(count) < (limit / count)
     thin_count = np.sum(filt)
     print "{} points remaining after thinning [factor: {:.2f}]".format(thin_count, float(thin_count)/count)
 
@@ -48,7 +48,6 @@ if __name__ == '__main__':
         )
     except LaspyException:
         pass
-
 
     try:
         classification = lasfile.get_classification()
@@ -100,3 +99,6 @@ if __name__ == '__main__':
         pass
 
     c.run()
+
+if __name__ == '__main__':
+    las()

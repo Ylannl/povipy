@@ -1,10 +1,11 @@
 from time import time
 import sys
-from pointio import io_npy
-from povi import App
-import numpy as np
 
-INFILE = "/Users/ravi/Sync/Phd/subproject/hierarchy/segmentation/data/scan_npy"
+import numpy as np
+from povi import App
+from pointio import io_npy
+
+import click
 
 class MAHelper(object):
 
@@ -13,87 +14,98 @@ class MAHelper(object):
             self.mean = np.mean(datadict['coords'], axis=0, dtype=np.float32)
         else:
             self.mean = 0
-        self.coords = datadict['coords']-self.mean
-        self.normals = datadict['normals']
-        self.ma_segment = datadict['ma_segment']
-        self.m, self.n = self.coords.shape
-        self.ma_coords_in = datadict['ma_coords_in']-self.mean
-        self.ma_coords_out = datadict['ma_coords_out']-self.mean
-        self.ma_qidx_in = datadict['ma_qidx_in']
-        self.ma_qidx_out = datadict['ma_qidx_out']
-        self.ma_radii_in = np.linalg.norm(self.coords - self.ma_coords_in, axis=1)
-        self.ma_radii_out = np.linalg.norm(self.coords - self.ma_coords_out, axis=1)
+        self.D={}
+        self.D['coords'] = datadict['coords']-self.mean
+        self.D['normals'] = datadict['normals']
+        self.D['ma_segment'] = datadict['ma_segment']
+        self.m, self.n = self.D['coords'].shape
+        self.D['ma_coords_in'] = datadict['ma_coords_in']-self.mean
+        self.D['ma_coords_out'] = datadict['ma_coords_out']-self.mean
+        self.D['ma_qidx_in'] = datadict['ma_qidx_in']
+        self.D['ma_qidx_out'] = datadict['ma_qidx_out']
+        self.D['ma_radii_in'] = np.linalg.norm(self.D['coords'] - self.D['ma_coords_in'], axis=1)
+        self.D['ma_radii_out'] = np.linalg.norm(self.D['coords'] - self.D['ma_coords_out'], axis=1)
 
-        f1_in = self.coords-self.ma_coords_in
-        f2_in = self.coords[self.ma_qidx_in]-self.ma_coords_in
+        f1_in = self.D['coords']-self.D['ma_coords_in']
+        f2_in = self.D['coords'][self.D['ma_qidx_in']]-self.D['ma_coords_in']
         f1_in = f1_in/np.linalg.norm(f1_in, axis=1)[:,None]
         f2_in = f2_in/np.linalg.norm(f2_in, axis=1)[:,None]
-        self.ma_bisec_in = (f1_in+f2_in)
-        self.ma_bisec_in = self.ma_bisec_in/np.linalg.norm(self.ma_bisec_in, axis=1)[:,None]
-        self.ma_theta_in = np.arccos(np.sum(f1_in*f2_in,axis=1))
+        self.D['ma_bisec_in'] = (f1_in+f2_in)
+        self.D['ma_bisec_in'] = self.D['ma_bisec_in']/np.linalg.norm(self.D['ma_bisec_in'], axis=1)[:,None]
+        self.D['ma_theta_in'] = np.arccos(np.sum(f1_in*f2_in,axis=1))
 
-        f1_out = self.coords-self.ma_coords_out
-        f2_out = self.coords[self.ma_qidx_out]-self.ma_coords_out
+        f1_out = self.D['coords']-self.D['ma_coords_out']
+        f2_out = self.D['coords'][self.D['ma_qidx_out']]-self.D['ma_coords_out']
         f1_out = f1_out/np.linalg.norm(f1_out, axis=1)[:,None]
         f2_out = f2_out/np.linalg.norm(f2_out, axis=1)[:,None]
-        self.ma_bisec_out = (f1_out+f2_out)
-        self.ma_bisec_out = self.ma_bisec_out/np.linalg.norm(self.ma_bisec_out, axis=1)[:,None]
-        self.ma_theta_out = np.arccos(np.sum(f1_out*f2_out,axis=1))
+        self.D['ma_bisec_out'] = (f1_out+f2_out)
+        self.D['ma_bisec_out'] = self.D['ma_bisec_out']/np.linalg.norm(self.D['ma_bisec_out'], axis=1)[:,None]
+        self.D['ma_theta_out'] = np.arccos(np.sum(f1_out*f2_out,axis=1))
 
-        self.ma_coords = np.concatenate([self.ma_coords_in, self.ma_coords_out])
-        self.ma_bisec = np.concatenate([self.ma_bisec_in, self.ma_bisec_out])
-        self.ma_theta = np.concatenate([self.ma_theta_in, self.ma_theta_out])
-        self.ma_radii = np.concatenate([self.ma_radii_in, self.ma_radii_out])
+        self.D['ma_coords'] = np.concatenate([self.D['ma_coords_in'], self.D['ma_coords_out']])
+        self.D['ma_bisec'] = np.concatenate([self.D['ma_bisec_in'], self.D['ma_bisec_out']])
+        self.D['ma_theta'] = np.concatenate([self.D['ma_theta_in'], self.D['ma_theta_out']])
+        self.D['ma_radii'] = np.concatenate([self.D['ma_radii_in'], self.D['ma_radii_out']])
 
-if __name__ == '__main__':
+
+@click.command(help='Visualiser for the MAT')
+@click.argument('input', type=click.Path(exists=True))
+@click.option('-r', '--max_r', default=190., type=float, help='Only show MAT with a radius lower than specified with this value.')
+def mat(input, max_r):
     c = App()
     
-    if len(sys.argv) > 1:
-        INFILE = sys.argv[1]
-
-    t1=time()
-    available_keys = io_npy.inspect_npy(INFILE)
-    print available_keys
-
-    datadict = io_npy.read_npy(INFILE)
+    t0=time()
+    datadict = io_npy.read_npy(input)
     ma = MAHelper(datadict)
-    # filt = ma.ma_radii < 190.
-    
-    filt = np.logical_and(ma.ma_radii < 190., ma.ma_segment>0)
-    # filt = ma.ma_segment>=0
-    # filt = ma.ma_segment>0
-    t2=time()
-    print "data loaded in {} s".format(t2-t1)
+    print("{} points loaded from file in {} s".format(ma.m, time()-t0))
+
     # import ipdb; ipdb.set_trace()
     c.add_data_source(
         opts=['splat_disk', 'with_normals'],
-        points=ma.coords, normals=ma.normals
+        points=ma.D['coords'], normals=ma.D['normals']
     )
 
-    c.add_data_source(
-        opts=['splat_point', 'with_intensity'],
-        points=ma.ma_coords[filt], 
-        category=ma.ma_segment[filt].astype(np.float32),
-        colormap='random'
-    )
+    if ma.D.has_key('ma_segment'):
+        f = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_segment']>0)
+        c.add_data_source(
+            opts=['splat_point', 'with_intensity'],
+            points=ma.D['ma_coords'][f], 
+            category=ma.D['ma_segment'][f].astype(np.float32),
+            colormap='random'
+        )
     
-    f = np.logical_and(ma.ma_radii < 190., ma.ma_segment==0)
-    c.add_data_source(
-        opts = ['splat_point', 'blend'],
-        points=ma.ma_coords[f]
-    )
+        f = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_segment']==0)
+        c.add_data_source(
+            opts = ['splat_point', 'blend'],
+            points=ma.D['ma_coords'][f]
+        )
+    else:
+        f = ma.D['ma_radii_in'] < max_r
+        c.add_data_source(
+            opts = ['splat_point', 'blend'],
+            points=ma.D['ma_coords_in'][f]
+        )
+        f = ma.D['ma_radii_out'] < max_r
+        c.add_data_source(
+            opts = ['splat_point', 'blend'],
+            points=ma.D['ma_coords_out'][f]
+        )
 
+    f = ma.D['ma_radii'] < max_r
     c.add_data_source_line(
-        coords_start = ma.ma_coords,
-        coords_end = ma.ma_bisec+ma.ma_coords
+        coords_start = ma.D['ma_coords'][f],
+        coords_end = ma.D['ma_bisec'][f]+ma.D['ma_coords'][f]
     )
     c.add_data_source_line(
-        coords_start = ma.ma_coords,
-        coords_end = np.concatenate([ma.coords,ma.coords])
+        coords_start = ma.D['ma_coords'][f],
+        coords_end = np.concatenate([ma.D['coords'],ma.D['coords']])[f]
     )
     c.add_data_source_line(
-        coords_start = ma.ma_coords,
-        coords_end = np.concatenate([ma.coords[ma.ma_qidx_in],ma.coords[ma.ma_qidx_out]])
+        coords_start = ma.D['ma_coords'][f],
+        coords_end = np.concatenate([ma.D['coords'][ma.D['ma_qidx_in']],ma.D['coords'][ma.D['ma_qidx_out']]])[f]
     )
     
     c.run()
+
+if __name__ == '__main__':
+    mat()
