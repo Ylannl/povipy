@@ -16,7 +16,7 @@ for other platforms check the [GLFW download page](http://www.glfw.org/download.
 
 Then install povipy with pip.
 ```
-pip install git+https://github.com/Ylannl/povipy.git
+pip install git+https://github.com/Ylannl/povipy.git --process-dependency-links
 ```
 
 ## Using
