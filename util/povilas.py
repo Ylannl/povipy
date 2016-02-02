@@ -14,6 +14,7 @@ import click
 def las(input, limit):
     # import ipdb; ipdb.set_trace()
     c = App()
+    c.multiview = False
     
     t0=time()
     lasfile = File(input)

@@ -62,7 +62,7 @@ class App(object):
 
         self.data_programs = []
 
-        self.current_data_program = 0
+        self.multiview = True
 
         self.rotation = q.quaternion()
         self.scale = 0.6
@@ -250,12 +250,14 @@ class App(object):
             self.update_projection_matrix()
         elif key == glfw.KEY_MINUS and action in [glfw.REPEAT, glfw.PRESS]:
             for program in self.data_programs:
-                if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
+                if program.draw_type == gl.GL_POINTS:
+                    if (program.is_visible and self.multiview) or not self.multiview:
+                        program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == glfw.KEY_EQUAL and action in [glfw.REPEAT, glfw.PRESS]:
             for program in self.data_programs:
-                if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+                if program.draw_type == gl.GL_POINTS:
+                    if (program.is_visible and self.multiview) or not self.multiview:
+                        program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == glfw.KEY_B and action == glfw.PRESS:
             for program in self.data_programs:
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
@@ -275,7 +277,14 @@ class App(object):
         elif glfw.KEY_0 <= key < glfw.KEY_9 and action == glfw.PRESS:
             i = int(chr(key))-1
             if i < len(self.data_programs):
-                self.data_programs[i].toggle_visibility()
+                if self.multiview:
+                    self.data_programs[i].toggle_visibility()
+                else:
+                    for pi, prog in enumerate(self.data_programs):
+                        prog.is_visible = False
+                        if pi == i:
+                            prog.is_visible = True
+
         self.update()
 
     def on_resize(self, window, size_x, size_y):
