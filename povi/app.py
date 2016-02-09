@@ -288,7 +288,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         elif key == glfw.KEY_L and action == glfw.PRESS:
             self.bg_white = not self.bg_white
             self.set_bg()
-        elif glfw.KEY_0 <= key < glfw.KEY_9 and action == glfw.PRESS:
+        elif glfw.KEY_0 <= key <= glfw.KEY_9 and action == glfw.PRESS:
             i = int(chr(key))-1
             if i < len(self.data_programs):
                 if self.multiview:

@@ -14,8 +14,8 @@ class SimpleShaderProgram(object):
     def __init__(self, draw_type=gl.GL_POINTS, is_visible=False):
         self.draw_type = draw_type
         self.is_visible = is_visible
-        self.initialise()
         self.uniforms = {}
+        self.color = (1,0,0)
 
     def initialise(self):
         def compileShader(handle, shader_source):
@@ -111,7 +111,7 @@ class SimpleShaderProgram(object):
         }}
         """
 
-    def fragment_str(self, color=(1.,0.,0.)):
+    def fragment_str(self):
         return """
         #version 330
 
@@ -121,7 +121,7 @@ class SimpleShaderProgram(object):
         {{
             color =  vec4({0}, {1}, {2}, 1);
         }}
-        """.format(color[0], color[1], color[2])
+        """.format(self.color[0], self.color[1], self.color[2])
 
 class CrossHairProgram(SimpleShaderProgram):
     hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
@@ -129,6 +129,7 @@ class CrossHairProgram(SimpleShaderProgram):
 
     def __init__(self):
         super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
+        self.initialise()
         self.setAttributes(self.hud_data)
 
     def vertex_str(self):
@@ -155,7 +156,7 @@ class CrossHairProgram(SimpleShaderProgram):
         """
 
 class PointShaderProgram(SimpleShaderProgram):
-    _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point']
+    _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
     
     def __init__(self, options=['fixed_point'], **kwargs):
         self.zmin, self.zmax = kwargs['zrange']
@@ -176,6 +177,9 @@ class PointShaderProgram(SimpleShaderProgram):
         # import ipdb; ipdb.set_trace()
 
         super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
+        if kwargs.has_key('color'):
+            self.color = kwargs['color']
+        self.initialise()
 
         self.setUniform('u_point_size', 20.0)
         if 'with_point_radius' in options:
@@ -189,6 +193,7 @@ class PointShaderProgram(SimpleShaderProgram):
         if kwargs.has_key('colormap'):
             colormap = kwargs['colormap']
         self.texture = self.create_colormap(scheme=colormap)
+        
 
     def create_colormap(self, scheme='jet'):
         texture = gl.glGenTextures(1)
@@ -346,11 +351,15 @@ class PointShaderProgram(SimpleShaderProgram):
             float c = 1.0 - (pow(2*x,2.0) + pow(2*x,2.0));
             //color =  vec4(color_scheme(v_color_intensity), alpha);
             //#else if defined(with_texture)
-            color =  texture(u_color_ramp, v_color_intensity);
+            #if defined(fixed_color)
+                color =  vec4({color[0]}, {color[1]}, {color[2]}, 1);
+            #else
+                color =  texture(u_color_ramp, v_color_intensity);
+            #endif
             gl_FragDepth = gl_FragCoord.z + 0.002*(1.0-pow(c, 1.0)) * gl_FragCoord.w;
             
         }}
-        """.format(defines=self.defines)
+        """.format(defines=self.defines, color=self.color)
 
 ### line shader:
 
@@ -358,8 +367,6 @@ class LineShaderProgram(SimpleShaderProgram):
 
     def __init__(self, color=(1,0,0)):
         self.do_blending = False
-        self.color = color
-
         # self.zmin, self.zmax = zrange
 
         # self.defines = ""
@@ -370,8 +377,9 @@ class LineShaderProgram(SimpleShaderProgram):
         # if 'with_intensity' in options:
         #     self.attributes += "attribute float a_intensity;\n"
 
-
         super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES)
+        self.color = color
+        self.initialise()
 
 ### triangle shader:
 
