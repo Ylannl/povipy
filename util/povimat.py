@@ -17,7 +17,8 @@ class MAHelper(object):
         self.D={}
         self.D['coords'] = datadict['coords']-self.mean
         self.D['normals'] = datadict['normals']
-        self.D['ma_segment'] = datadict['ma_segment']
+        if datadict.has_key('ma_segment'):
+            self.D['ma_segment'] = datadict['ma_segment']
         self.m, self.n = self.D['coords'].shape
         self.D['ma_coords_in'] = datadict['ma_coords_in']-self.mean
         self.D['ma_coords_out'] = datadict['ma_coords_out']-self.mean
@@ -50,8 +51,9 @@ class MAHelper(object):
 
 @click.command(help='Visualiser for the MAT')
 @click.argument('input', type=click.Path(exists=True))
-@click.option('-r', '--max_r', default=190., type=float, help='Only show MAT with a radius lower than specified with this value.')
-def mat(input, max_r):
+@click.option('-R', '--max_r', default=190., type=float, help='Only show MAT with a radius lower than specified with this value.')
+@click.option('-r', '--min_r', default=0., type=float, help='Only show MAT with a radius higher than specified with this value.')
+def mat(input, min_r, max_r):
     c = App()
     
     t0=time()
@@ -65,8 +67,10 @@ def mat(input, max_r):
         points=ma.D['coords'], normals=ma.D['normals']
     )
 
+    f_r = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_radii'] > min_r)
+
     if ma.D.has_key('ma_segment'):
-        f = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_segment']>0)
+        f = np.logical_and(f_r, ma.D['ma_segment']>0)
         c.add_data_source(
             opts=['splat_point', 'with_intensity'],
             points=ma.D['ma_coords'][f], 
@@ -74,35 +78,35 @@ def mat(input, max_r):
             colormap='random'
         )
     
-        f = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_segment']==0)
+        f = np.logical_and(f_r, ma.D['ma_segment']==0)
         c.add_data_source(
             opts = ['splat_point', 'blend'],
             points=ma.D['ma_coords'][f]
         )
     else:
-        f = ma.D['ma_radii_in'] < max_r
+        f_ri = np.logical_and(ma.D['ma_radii_in'] < max_r, ma.D['ma_radii_in'] > min_r)
         c.add_data_source(
             opts = ['splat_point', 'blend'],
-            points=ma.D['ma_coords_in'][f]
+            points=ma.D['ma_coords_in'][f_ri]
         )
-        f = ma.D['ma_radii_out'] < max_r
+        f_ro = np.logical_and(ma.D['ma_radii_out'] < max_r, ma.D['ma_radii_out'] > min_r)
         c.add_data_source(
             opts = ['splat_point', 'blend'],
-            points=ma.D['ma_coords_out'][f]
+            points=ma.D['ma_coords_out'][f_ro]
         )
 
-    f = ma.D['ma_radii'] < max_r
+    
     c.add_data_source_line(
-        coords_start = ma.D['ma_coords'][f],
-        coords_end = ma.D['ma_bisec'][f]+ma.D['ma_coords'][f]
+        coords_start = ma.D['ma_coords'][f_r],
+        coords_end = ma.D['ma_bisec'][f_r]+ma.D['ma_coords'][f_r]
     )
     c.add_data_source_line(
-        coords_start = ma.D['ma_coords'][f],
-        coords_end = np.concatenate([ma.D['coords'],ma.D['coords']])[f]
+        coords_start = ma.D['ma_coords'][f_r],
+        coords_end = np.concatenate([ma.D['coords'],ma.D['coords']])[f_r]
     )
     c.add_data_source_line(
-        coords_start = ma.D['ma_coords'][f],
-        coords_end = np.concatenate([ma.D['coords'][ma.D['ma_qidx_in']],ma.D['coords'][ma.D['ma_qidx_out']]])[f]
+        coords_start = ma.D['ma_coords'][f_r],
+        coords_end = np.concatenate([ma.D['coords'][ma.D['ma_qidx_in']],ma.D['coords'][ma.D['ma_qidx_out']]])[f_r]
     )
     
     c.run()
