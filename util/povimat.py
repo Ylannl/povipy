@@ -14,7 +14,7 @@ class MAHelper(object):
             self.mean = np.mean(datadict['coords'], axis=0, dtype=np.float32)
         else:
             self.mean = 0
-        self.D={}
+        self.D=datadict
         self.D['coords'] = datadict['coords']-self.mean
         self.D['normals'] = datadict['normals']
         if datadict.has_key('ma_segment'):
@@ -47,6 +47,7 @@ class MAHelper(object):
         self.D['ma_bisec'] = np.concatenate([self.D['ma_bisec_in'], self.D['ma_bisec_out']])
         self.D['ma_theta'] = np.concatenate([self.D['ma_theta_in'], self.D['ma_theta_out']])
         self.D['ma_radii'] = np.concatenate([self.D['ma_radii_in'], self.D['ma_radii_out']])
+        self.D['ma_qidx'] = np.concatenate([self.D['ma_qidx_in'], self.D['ma_qidx_out']])
 
 
 @click.command(help='Visualiser for the MAT')
