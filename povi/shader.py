@@ -40,33 +40,11 @@ class SimpleShaderProgram(object):
 
         # Request a buffer slot from GPU
         self.buffer = gl.glGenBuffers(1)
-        self.VAO = gl.glGenVertexArrays(1)
+        # self.VAO = gl.glGenVertexArrays(1)
 
     def setAttributes(self, data):
+        self.data = data
         self.dataLen = data.shape[0]
-        # Make this buffer the default one        
-        gl.glBindVertexArray(self.VAO)
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)        
-        # Upload data
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
-
-        offset = 0
-        for i, name in enumerate(data.dtype.names):
-            # import ipdb; ipdb.set_trace()
-            stride = data[name].strides[0]
-            if data[name].ndim == 1:
-                size = 1
-            else:
-                size = data[name].shape[1]
-            loc = gl.glGetAttribLocation(self.program, name)
-            
-            gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
-            gl.glEnableVertexAttribArray(loc)
-            offset += data.dtype[name].itemsize
-
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-        gl.glBindVertexArray(0)
 
     def setUniform(self, name, data):
         gl.glUseProgram(self.program)
@@ -83,8 +61,25 @@ class SimpleShaderProgram(object):
         if self.is_visible:
             # self.setAttributes(self.data)
             gl.glUseProgram(self.program)
-            gl.glBindVertexArray(self.VAO)
-            # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            # Upload data
+            gl.glBufferData(gl.GL_ARRAY_BUFFER, self.data.nbytes, self.data, gl.GL_DYNAMIC_DRAW)
+
+            offset = 0
+            for i, name in enumerate(self.data.dtype.names):
+                # import ipdb; ipdb.set_trace()
+                stride = self.data[name].strides[0]
+                if self.data[name].ndim == 1:
+                    size = 1
+                else:
+                    size = self.data[name].shape[1]
+                loc = gl.glGetAttribLocation(self.program, name)
+                
+                gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
+                gl.glEnableVertexAttribArray(loc)
+                offset += self.data.dtype[name].itemsize
+
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
             gl.glDrawArrays(self.draw_type, 0, self.dataLen)
             gl.glBindVertexArray(0)
             gl.glUseProgram(0)
@@ -128,9 +123,11 @@ class CrossHairProgram(SimpleShaderProgram):
     hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
 
     def __init__(self):
+        self.data = self.hud_data
         super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
         self.initialise()
         self.setAttributes(self.hud_data)
+        self.is_visible = True
 
     def vertex_str(self):
         return """

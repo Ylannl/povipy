@@ -11,14 +11,18 @@ import math
 from time import time
 
 import OpenGL.GL as gl
-import glfw
+
+from PyQt5.QtCore import QEvent
+from PyQt5.QtGui import (QGuiApplication, QMatrix4x4, QOpenGLContext,
+        QOpenGLShader, QOpenGLShaderProgram, QSurfaceFormat, QWindow)
+
 from transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
 from linalg import quaternion as q
 from shader import *
 
 
-class App(object):
+class App(QWindow):
 
     instructions = """
 --Key controls
@@ -39,35 +43,56 @@ z + scroll      - move near clipping plane (+ shift for more precision)
 a + z + scroll  - move far and near clipping plane simultaniously (+ shift for more precision)
 """
 
-    def __init__(self):
+    def __init__(self, parent=None):
+        super(App, self).__init__(parent)
+        self.setSurfaceType(QWindow.OpenGLSurface)
+
+        self.glFormat = QSurfaceFormat()
+        self.glFormat.setVersion(3,3)
+        self.glFormat.setProfile(QSurfaceFormat.CompatibilityProfile)
+        QSurfaceFormat.setDefaultFormat(self.glFormat)
+
+        self.m_context = None
+
         size = 720, 720
 
-        # Initialize the library
-        if not glfw.init():
-            return
-        # Create a windowed mode window and its OpenGL context
-        glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
-        glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-        self.window = glfw.create_window(size[0], size[1], "PoVi", None, None)
-        if not self.window:
-            glfw.terminate()
-            return
+        # # Initialize the library
+        # if not glfw.init():
+        #     return
+        # # Create a windowed mode window and its OpenGL context
+        # glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
+        # glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        # glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
+        # glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        # self.window = glfw.create_window(size[0], size[1], "PoVi", None, None)
+        # if not self.window:
+        #     glfw.terminate()
+        #     return
 
-        # Make the window's context current
-        glfw.make_context_current(self.window)
-        glfw.swap_interval(1)
+        # # Make the window's context current
+        # glfw.make_context_current(self.window)
+        # glfw.swap_interval(1)
 
-        # glfw.set_window_refresh_callback(self.window, self.on_draw)
-        glfw.set_framebuffer_size_callback(self.window, self.on_resize)
-        glfw.set_key_callback(self.window, self.on_key_press)
-        # glfw.set_mouse_button_callback(self.window, self.on_mouse_button)
-        glfw.set_scroll_callback(self.window, self.on_mouse_wheel)
-        glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
-        # glfw.set_window_close_callback(self.window, self._on_close)
+        # # glfw.set_window_refresh_callback(self.window, self.on_draw)
+        # glfw.set_framebuffer_size_callback(self.window, self.on_resize)
+        # glfw.set_key_callback(self.window, self.on_key_press)
+        # # glfw.set_mouse_button_callback(self.window, self.on_mouse_button)
+        # glfw.set_scroll_callback(self.window, self.on_mouse_wheel)
+        # glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
+        # # glfw.set_window_close_callback(self.window, self._on_close)
 
+        # if self.m_context is None:
+        self.m_context = QOpenGLContext(self)
+        # self.m_context.setFormat(QSurfaceFormat.defaultFormat())
+        self.m_context.setFormat(self.glFormat)
+        self.m_context.create()
+
+        
+        import ipdb; ipdb.set_trace()
+
+        
         self.hud_program = CrossHairProgram()
+        print 's'
 
         self.default_view = np.eye(4, dtype=np.float32)
         self.view = self.default_view
@@ -97,7 +122,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         print(self.instructions)
 
 
-    def on_initialize(self):
+    def initialize(self):
         self.set_bg()
         gl.glDepthFunc(gl.GL_LESS)
 
@@ -115,17 +140,61 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         self.on_resize(self.window, *self.size)
 
-    def run(self):
-        self.on_initialize()
-        # Loop until the user closes the window
-        while not glfw.window_should_close(self.window):
-            # Render here, e.g. using pyOpenGL
-            self.on_draw()
-            # Swap front and back buffers
-            glfw.swap_buffers(self.window)
-            # Poll for and process events
-            glfw.wait_events()
-        glfw.terminate()
+    def render(self):
+
+        self.m_context.makeCurrent(self)
+
+        bits = 0
+        bits |= gl.GL_COLOR_BUFFER_BIT
+        bits |= gl.GL_DEPTH_BUFFER_BIT
+        bits |= gl.GL_STENCIL_BUFFER_BIT
+        gl.glClear(bits)
+        gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
+        
+        for program in self.data_programs:
+            if program.do_blending:
+                if self.bg_white:
+                    gl.glEnable(gl.GL_BLEND)
+                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_SRC_ALPHA)
+                else:
+                    gl.glEnable(gl.GL_BLEND)
+                    gl.glBlendFunc(gl.GL_ONE, gl.GL_SRC_ALPHA)
+            else:
+                gl.glDisable(gl.GL_BLEND)
+            program.draw()
+        
+        if self.hud_program.is_visible:
+            self.hud_program.draw()
+
+        if self.isExposed():
+            self.m_context.swapBuffers(self)
+
+    def event(self, event):
+        if event.type() == QEvent.UpdateRequest:
+            self.render()
+            return True
+
+        return super(App, self).event(event)
+
+    def exposeEvent(self, event):
+        self.render()
+
+    def resizeEvent(self, event):
+        print 'resize'
+        self.render()
+
+
+    # def run(self):
+    #     self.on_initialize()
+    #     # Loop until the user closes the window
+    #     while not glfw.window_should_close(self.window):
+    #         # Render here, e.g. using pyOpenGL
+    #         self.on_draw()
+    #         # Swap front and back buffers
+    #         glfw.swap_buffers(self.window)
+    #         # Poll for and process events
+    #         glfw.wait_events()
+    #     glfw.terminate()
 
     def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
@@ -251,160 +320,156 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             gl.glClearColor(0.15,0.15,0.15,1)
             # gloo.set_state('translucent', clear_color=np.array([0.15,0.15,0.15,1]) )
 
-    def on_key_press(self, window, key, scancode, action, mods):
-        if key == glfw.KEY_R and action == glfw.PRESS:
-            self.view = np.eye(4, dtype=np.float32)
-            self.rotation = q.quaternion()
-            self.scale = self.modelscale
-            self.translation = np.zeros(3)
-            self.camera_position = -12.
-            self.near_clip = 2.
-            self.far_clip = 100.
-            self.update_view_matrix()
-            self.update_projection_matrix()
-        elif key == glfw.KEY_MINUS and action in [glfw.REPEAT, glfw.PRESS]:
-            for program in self.data_programs:
-                if program.draw_type == gl.GL_POINTS:
-                    if (program.is_visible and self.multiview) or not self.multiview:
-                        program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
-        elif key == glfw.KEY_EQUAL and action in [glfw.REPEAT, glfw.PRESS]:
-            for program in self.data_programs:
-                if program.draw_type == gl.GL_POINTS:
-                    if (program.is_visible and self.multiview) or not self.multiview:
-                        program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
-        elif key == glfw.KEY_B and action == glfw.PRESS:
-            for program in self.data_programs:
-                if program.is_visible and program.draw_type == gl.GL_POINTS:
-                    program.do_blending = not program.do_blending
-        elif key == glfw.KEY_T and action == glfw.PRESS:
-            self.rotation = q.quaternion()
-            self.update_view_matrix()
-        elif key == glfw.KEY_P and action == glfw.PRESS:
-            if self.projection_mode == 'perspective':
-                self.projection_mode = 'orthographic'
-            else:
-                self.projection_mode = 'perspective'
-            self.update_projection_matrix()
-        elif key == glfw.KEY_L and action == glfw.PRESS:
-            self.bg_white = not self.bg_white
-            self.set_bg()
-        elif glfw.KEY_0 <= key <= glfw.KEY_9 and action == glfw.PRESS:
-            i = int(chr(key))-1
-            if i < len(self.data_programs):
-                if self.multiview:
-                    self.data_programs[i].toggle_visibility()
-                else:
-                    for pi, prog in enumerate(self.data_programs):
-                        prog.is_visible = False
-                        if pi == i:
-                            prog.is_visible = True
+    # def on_key_press(self, window, key, scancode, action, mods):
+    #     if key == glfw.KEY_R and action == glfw.PRESS:
+    #         self.view = np.eye(4, dtype=np.float32)
+    #         self.rotation = q.quaternion()
+    #         self.scale = self.modelscale
+    #         self.translation = np.zeros(3)
+    #         self.camera_position = -12.
+    #         self.near_clip = 2.
+    #         self.far_clip = 100.
+    #         self.update_view_matrix()
+    #         self.update_projection_matrix()
+    #     elif key == glfw.KEY_MINUS and action in [glfw.REPEAT, glfw.PRESS]:
+    #         for program in self.data_programs:
+    #             if program.draw_type == gl.GL_POINTS:
+    #                 if (program.is_visible and self.multiview) or not self.multiview:
+    #                     program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
+    #     elif key == glfw.KEY_EQUAL and action in [glfw.REPEAT, glfw.PRESS]:
+    #         for program in self.data_programs:
+    #             if program.draw_type == gl.GL_POINTS:
+    #                 if (program.is_visible and self.multiview) or not self.multiview:
+    #                     program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+    #     elif key == glfw.KEY_B and action == glfw.PRESS:
+    #         for program in self.data_programs:
+    #             if program.is_visible and program.draw_type == gl.GL_POINTS:
+    #                 program.do_blending = not program.do_blending
+    #     elif key == glfw.KEY_T and action == glfw.PRESS:
+    #         self.rotation = q.quaternion()
+    #         self.update_view_matrix()
+    #     elif key == glfw.KEY_P and action == glfw.PRESS:
+    #         if self.projection_mode == 'perspective':
+    #             self.projection_mode = 'orthographic'
+    #         else:
+    #             self.projection_mode = 'perspective'
+    #         self.update_projection_matrix()
+    #     elif key == glfw.KEY_L and action == glfw.PRESS:
+    #         self.bg_white = not self.bg_white
+    #         self.set_bg()
+    #     elif glfw.KEY_0 <= key <= glfw.KEY_9 and action == glfw.PRESS:
+    #         i = int(chr(key))-1
+    #         if i < len(self.data_programs):
+    #             if self.multiview:
+    #                 self.data_programs[i].toggle_visibility()
+    #             else:
+    #                 for pi, prog in enumerate(self.data_programs):
+    #                     prog.is_visible = False
+    #                     if pi == i:
+    #                         prog.is_visible = True
 
-        self.update()
+    #     self.update()
 
-    def on_resize(self, window, size_x, size_y):
-        gl.glViewport(int(0), int(0), int(size_x), int(size_y))
+    # def on_resize(self, window, size_x, size_y):
+    #     gl.glViewport(int(0), int(0), int(size_x), int(size_y))
 
-        self.radius = 0.5 * min(size_x, size_y)
-        self.size = size_x, size_y
+    #     self.radius = 0.5 * min(size_x, size_y)
+    #     self.size = size_x, size_y
 
-        self.update_projection_matrix()  
+    #     self.update_projection_matrix()  
 
-    def on_mouse_wheel(self, window, offset_x, offset_y):
-        ticks = offset_y
+    # def on_mouse_wheel(self, window, offset_x, offset_y):
+    #     ticks = offset_y
 
-        if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
-            if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 30
-            self.near_clip -= ticks
-            self.far_clip -= ticks
-            self.update_projection_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_Z):
-            if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 30
-            new = max(0.1,self.near_clip - ticks)
-            if new <= self.far_clip:
-                self.near_clip = new
-                self.update_projection_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_A):
-            if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-                ticks /= 30
-            new = min(1000,self.far_clip - ticks)
-            if new >= self.near_clip:
-                self.far_clip = new
-                self.update_projection_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-            if self.projection_mode == 'perspective':
-                old_fov = self.fov
-                # do `dolly zooming` so that world appears at same size after canging fov
-                self.fov = max(5.,self.fov + ticks)
-                self.fov = min(120.,self.fov)
-                self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
-                self.update_projection_matrix()
-                self.update_view_matrix()
-        elif glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL):
-            self.camera_position += ticks/10
-            self.update_view_matrix()
-        else:
-            self.scale *= ticks/10 + 1.
-            # self.camera_position += ticks/10
-            self.update_view_matrix()
-        self.update()
+    #     if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
+    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+    #             ticks /= 30
+    #         self.near_clip -= ticks
+    #         self.far_clip -= ticks
+    #         self.update_projection_matrix()
+    #     elif glfw.get_key(self.window, glfw.KEY_Z):
+    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+    #             ticks /= 30
+    #         new = max(0.1,self.near_clip - ticks)
+    #         if new <= self.far_clip:
+    #             self.near_clip = new
+    #             self.update_projection_matrix()
+    #     elif glfw.get_key(self.window, glfw.KEY_A):
+    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+    #             ticks /= 30
+    #         new = min(1000,self.far_clip - ticks)
+    #         if new >= self.near_clip:
+    #             self.far_clip = new
+    #             self.update_projection_matrix()
+    #     elif glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+    #         if self.projection_mode == 'perspective':
+    #             old_fov = self.fov
+    #             # do `dolly zooming` so that world appears at same size after canging fov
+    #             self.fov = max(5.,self.fov + ticks)
+    #             self.fov = min(120.,self.fov)
+    #             self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
+    #             self.update_projection_matrix()
+    #             self.update_view_matrix()
+    #     elif glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL):
+    #         self.camera_position += ticks/10
+    #         self.update_view_matrix()
+    #     else:
+    #         self.scale *= ticks/10 + 1.
+    #         # self.camera_position += ticks/10
+    #         self.update_view_matrix()
+    #     self.update()
 
-    def on_mouse_move(self, window, pos_x, pos_y):
-        if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-            x0,y0 = self.last_mouse_pos
-            x1,y1 = pos_x, pos_y
-            dx, dy = (x1-x0), (y1-y0)
-            #scale to zero plane in projection frustrum
-            if self.projection_mode == 'perspective':
-                scale = -self.camera_position * math.tan(math.radians(self.fov/2.))
-                dx, dy = scale*dx, scale*dy
-                #multiply with inverse view matrix and apply translation in world coordinates
-                self.translation += np.array([dx/self.radius, -dy/self.radius, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
-            elif self.projection_mode == 'orthographic':
-                # this is not fully correct
-                self.translation += self.modelscale * np.array([dx, -dy, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
+    # def on_mouse_move(self, window, pos_x, pos_y):
+    #     if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
+    #         x0,y0 = self.last_mouse_pos
+    #         x1,y1 = pos_x, pos_y
+    #         dx, dy = (x1-x0), (y1-y0)
+    #         #scale to zero plane in projection frustrum
+    #         if self.projection_mode == 'perspective':
+    #             scale = -self.camera_position * math.tan(math.radians(self.fov/2.))
+    #             dx, dy = scale*dx, scale*dy
+    #             #multiply with inverse view matrix and apply translation in world coordinates
+    #             self.translation += np.array([dx/self.radius, -dy/self.radius, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
+    #         elif self.projection_mode == 'orthographic':
+    #             # this is not fully correct
+    #             self.translation += self.modelscale * np.array([dx, -dy, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
             
-            self.hud_program.is_visible = True
-        elif glfw.get_mouse_button(self.window, glfw.MOUSE_BUTTON_LEFT):
-            x0,y0 = self.screen2view(*self.last_mouse_pos)
-            x1,y1 = self.screen2view(pos_x, pos_y)
+    #         self.hud_program.is_visible = True
+    #     elif glfw.get_mouse_button(self.window, glfw.MOUSE_BUTTON_LEFT):
+    #         x0,y0 = self.screen2view(*self.last_mouse_pos)
+    #         x1,y1 = self.screen2view(pos_x, pos_y)
 
-            v0 = q.arcball(x0, y0)
-            v1 = q.arcball(x1, y1)
+    #         v0 = q.arcball(x0, y0)
+    #         v1 = q.arcball(x1, y1)
 
-            self.rotation = q.product(v1, v0, self.rotation)
+    #         self.rotation = q.product(v1, v0, self.rotation)
 
-            self.hud_program.is_visible = True
-        else:
-            self.hud_program.is_visible = False
-        self.update_view_matrix()
-        self.update()
+    #         self.hud_program.is_visible = True
+    #     else:
+    #         self.hud_program.is_visible = False
+    #     self.update_view_matrix()
+    #     self.update()
 
-        self.last_mouse_pos = pos_x, pos_y
+    #     self.last_mouse_pos = pos_x, pos_y
 
     def update(self):
         self.on_draw()
 
-    def on_draw(self):
-        bits = 0
-        bits |= gl.GL_COLOR_BUFFER_BIT
-        bits |= gl.GL_DEPTH_BUFFER_BIT
-        bits |= gl.GL_STENCIL_BUFFER_BIT
-        gl.glClear(bits)
-        gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
-        
-        for program in self.data_programs:
-            if program.do_blending:
-                if self.bg_white:
-                    gl.glEnable(gl.GL_BLEND)
-                    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_SRC_ALPHA)
-                else:
-                    gl.glEnable(gl.GL_BLEND)
-                    gl.glBlendFunc(gl.GL_ONE, gl.GL_SRC_ALPHA)
-            else:
-                gl.glDisable(gl.GL_BLEND)
-            program.draw()
-        
-        if self.hud_program.is_visible:
-            self.hud_program.draw()
+
+if __name__ == '__main__':
+
+    import sys
+
+    app = QGuiApplication(sys.argv)
+
+    format = QSurfaceFormat()
+    # format.setSamples(4)
+
+    window = App()
+    window.setFormat(format)
+    window.resize(700, 700)
+    window.show()
+
+    # window.setAnimating(True)
+
+    sys.exit(app.exec_())
