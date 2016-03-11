@@ -12,22 +12,18 @@ from time import time
 
 import OpenGL.GL as gl
 
+from PyQt5 import Qt
 from PyQt5.QtCore import QEvent
-from PyQt5.QtGui import (QGuiApplication, QMatrix4x4, QOpenGLContext,
+from PyQt5.QtGui import (QMatrix4x4, QOpenGLContext,
         QOpenGLShader, QOpenGLShaderProgram, QSurfaceFormat, QWindow)
+from PyQt5.QtWidgets import QApplication, QWidget
 
 from transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
 from linalg import quaternion as q
 from shader import *
 
-
-format = QSurfaceFormat()
-format.setVersion(3,3)
-format.setProfile(QSurfaceFormat.CompatibilityProfile)
-QSurfaceFormat.setDefaultFormat(format)
-
-class App(QWindow):
+class App(Qt.QWindow):
 
     instructions = """
 --Key controls
@@ -50,9 +46,19 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
     def __init__(self, parent=None):
         super(App, self).__init__(parent)
-        self.setSurfaceType(QWindow.OpenGLSurface)
 
-        self.m_context = None
+
+        format = QSurfaceFormat()
+        format.setVersion(3, 3)
+        format.setProfile(QSurfaceFormat.CoreProfile)
+        format.setStereo(False)
+        format.setSwapBehavior(QSurfaceFormat.DoubleBuffer)
+        self.setSurfaceType(QWindow.OpenGLSurface)
+        self.context = QOpenGLContext()
+        self.context.setFormat(format)
+        if not self.context.create():
+            raise Exception('self.context.create() failed')
+        self.create()
 
         size = 720, 720
 
@@ -88,9 +94,9 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.m_context.create()
 
         
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
-        
+        self.context.makeCurrent(self)
         self.hud_program = CrossHairProgram()
         print 's'
 
@@ -121,8 +127,8 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         print(self.instructions)
 
-
     def initialize(self):
+        self.context.makeCurrent(self)
         self.set_bg()
         gl.glDepthFunc(gl.GL_LESS)
 
@@ -141,8 +147,10 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.on_resize(self.window, *self.size)
 
     def render(self):
+        if not self.isExposed():
+            return
 
-        self.m_context.makeCurrent(self)
+        self.context.makeCurrent(self)
 
         bits = 0
         bits |= gl.GL_COLOR_BUFFER_BIT
@@ -166,8 +174,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         if self.hud_program.is_visible:
             self.hud_program.draw()
 
-        if self.isExposed():
-            self.m_context.swapBuffers(self)
+        self.context.swapBuffers(self)
 
     def event(self, event):
         if event.type() == QEvent.UpdateRequest:
@@ -460,15 +467,10 @@ if __name__ == '__main__':
 
     import sys
 
-    app = QGuiApplication(sys.argv)
-
-    # format.setSamples(4)
-
+    app = QApplication([])
     window = App()
-    window.setFormat(format)
-    window.resize(700, 700)
+    # glQWindowWidget = QWidget.createWindowContainer(App, None,
+    # Qt.Widget)
+    window.resize(720, 720)
     window.show()
-
-    # window.setAnimating(True)
-
-    sys.exit(app.exec_())
+    app.exec_()
