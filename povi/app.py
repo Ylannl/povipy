@@ -12,18 +12,17 @@ from time import time
 
 import OpenGL.GL as gl
 
-from PyQt5 import Qt
-from PyQt5.QtCore import QEvent
-from PyQt5.QtGui import (QMatrix4x4, QOpenGLContext,
-        QOpenGLShader, QOpenGLShaderProgram, QSurfaceFormat, QWindow)
-from PyQt5.QtWidgets import QApplication, QWidget
+
+from PyQt5.QtCore import QEvent, Qt
+from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
+from PyQt5.QtWidgets import QApplication
 
 from transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
 from linalg import quaternion as q
 from shader import *
 
-class App(Qt.QWindow):
+class App(QWindow):
 
     instructions = """
 --Key controls
@@ -117,7 +116,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         self.last_mouse_pos = 0,0
 
-        # self.on_resize(self.window, *self.size)
+        self.on_resize(*self.size)
 
     def render(self):
         if not self.isExposed():
@@ -150,6 +149,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.context.swapBuffers(self)
 
     def event(self, event):
+        # print event.type()
         if event.type() == QEvent.UpdateRequest:
             self.render()
             return True
@@ -160,7 +160,8 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.render()
 
     def resizeEvent(self, event):
-        print 'resize'
+        size = event.size()
+        self.on_resize(size.width(), size.height())
         self.render()
 
     def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
@@ -287,140 +288,149 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             gl.glClearColor(0.15,0.15,0.15,1)
             # gloo.set_state('translucent', clear_color=np.array([0.15,0.15,0.15,1]) )
 
-    # def on_key_press(self, window, key, scancode, action, mods):
-    #     if key == glfw.KEY_R and action == glfw.PRESS:
-    #         self.view = np.eye(4, dtype=np.float32)
-    #         self.rotation = q.quaternion()
-    #         self.scale = self.modelscale
-    #         self.translation = np.zeros(3)
-    #         self.camera_position = -12.
-    #         self.near_clip = 2.
-    #         self.far_clip = 100.
-    #         self.update_view_matrix()
-    #         self.update_projection_matrix()
-    #     elif key == glfw.KEY_MINUS and action in [glfw.REPEAT, glfw.PRESS]:
-    #         for program in self.data_programs:
-    #             if program.draw_type == gl.GL_POINTS:
-    #                 if (program.is_visible and self.multiview) or not self.multiview:
-    #                     program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
-    #     elif key == glfw.KEY_EQUAL and action in [glfw.REPEAT, glfw.PRESS]:
-    #         for program in self.data_programs:
-    #             if program.draw_type == gl.GL_POINTS:
-    #                 if (program.is_visible and self.multiview) or not self.multiview:
-    #                     program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
-    #     elif key == glfw.KEY_B and action == glfw.PRESS:
-    #         for program in self.data_programs:
-    #             if program.is_visible and program.draw_type == gl.GL_POINTS:
-    #                 program.do_blending = not program.do_blending
-    #     elif key == glfw.KEY_T and action == glfw.PRESS:
-    #         self.rotation = q.quaternion()
-    #         self.update_view_matrix()
-    #     elif key == glfw.KEY_P and action == glfw.PRESS:
-    #         if self.projection_mode == 'perspective':
-    #             self.projection_mode = 'orthographic'
-    #         else:
-    #             self.projection_mode = 'perspective'
-    #         self.update_projection_matrix()
-    #     elif key == glfw.KEY_L and action == glfw.PRESS:
-    #         self.bg_white = not self.bg_white
-    #         self.set_bg()
-    #     elif glfw.KEY_0 <= key <= glfw.KEY_9 and action == glfw.PRESS:
-    #         i = int(chr(key))-1
-    #         if i < len(self.data_programs):
-    #             if self.multiview:
-    #                 self.data_programs[i].toggle_visibility()
-    #             else:
-    #                 for pi, prog in enumerate(self.data_programs):
-    #                     prog.is_visible = False
-    #                     if pi == i:
-    #                         prog.is_visible = True
+    def keyPressEvent(self, event):
+        key = event.key()
+        repeat = event.isAutoRepeat()
+        if key == Qt.Key_R:
+            self.view = np.eye(4, dtype=np.float32)
+            self.rotation = q.quaternion()
+            self.scale = self.modelscale
+            self.translation = np.zeros(3)
+            self.camera_position = -12.
+            self.near_clip = 2.
+            self.far_clip = 100.
+            self.update_view_matrix()
+            self.update_projection_matrix()
+        elif key == Qt.Key_Minus:
+            for program in self.data_programs:
+                if program.draw_type == gl.GL_POINTS:
+                    if (program.is_visible and self.multiview) or not self.multiview:
+                        program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
+        elif key == Qt.Key_Equal:
+            for program in self.data_programs:
+                if program.draw_type == gl.GL_POINTS:
+                    if (program.is_visible and self.multiview) or not self.multiview:
+                        program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+        elif key == Qt.Key_B:
+            for program in self.data_programs:
+                if program.is_visible and program.draw_type == gl.GL_POINTS:
+                    program.do_blending = not program.do_blending
+        elif key == Qt.Key_T:
+            self.rotation = q.quaternion()
+            self.update_view_matrix()
+        elif key == Qt.Key_P:
+            if self.projection_mode == 'perspective':
+                self.projection_mode = 'orthographic'
+            else:
+                self.projection_mode = 'perspective'
+            self.update_projection_matrix()
+        elif key == Qt.Key_L:
+            self.bg_white = not self.bg_white
+            self.set_bg()
+        elif Qt.Key_0 <= key <= Qt.Key_9:
+            i = int(chr(key))-1
+            if i < len(self.data_programs):
+                if self.multiview:
+                    self.data_programs[i].toggle_visibility()
+                else:
+                    for pi, prog in enumerate(self.data_programs):
+                        prog.is_visible = False
+                        if pi == i:
+                            prog.is_visible = True
 
-    #     self.update()
+        self.update()
 
-    # def on_resize(self, window, size_x, size_y):
-    #     gl.glViewport(int(0), int(0), int(size_x), int(size_y))
+    def on_resize(self, size_x, size_y):
+        gl.glViewport(int(0), int(0), int(size_x), int(size_y))
 
-    #     self.radius = 0.5 * min(size_x, size_y)
-    #     self.size = size_x, size_y
+        self.radius = 0.5 * min(size_x, size_y)
+        self.size = size_x, size_y
 
-    #     self.update_projection_matrix()  
+        self.update_projection_matrix()
 
+    def wheelEvent(self, event):
     # def on_mouse_wheel(self, window, offset_x, offset_y):
-    #     ticks = offset_y
+        ticks = float(event.angleDelta().y())/50
+        print ticks
+        modifiers = event.modifiers()
 
-    #     if glfw.get_key(self.window, glfw.KEY_Z) and glfw.get_key(self.window, glfw.KEY_A):
-    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-    #             ticks /= 30
-    #         self.near_clip -= ticks
-    #         self.far_clip -= ticks
-    #         self.update_projection_matrix()
-    #     elif glfw.get_key(self.window, glfw.KEY_Z):
-    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-    #             ticks /= 30
-    #         new = max(0.1,self.near_clip - ticks)
-    #         if new <= self.far_clip:
-    #             self.near_clip = new
-    #             self.update_projection_matrix()
-    #     elif glfw.get_key(self.window, glfw.KEY_A):
-    #         if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-    #             ticks /= 30
-    #         new = min(1000,self.far_clip - ticks)
-    #         if new >= self.near_clip:
-    #             self.far_clip = new
-    #             self.update_projection_matrix()
-    #     elif glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-    #         if self.projection_mode == 'perspective':
-    #             old_fov = self.fov
-    #             # do `dolly zooming` so that world appears at same size after canging fov
-    #             self.fov = max(5.,self.fov + ticks)
-    #             self.fov = min(120.,self.fov)
-    #             self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
-    #             self.update_projection_matrix()
-    #             self.update_view_matrix()
-    #     elif glfw.get_key(self.window, glfw.KEY_LEFT_CONTROL):
-    #         self.camera_position += ticks/10
-    #         self.update_view_matrix()
-    #     else:
-    #         self.scale *= ticks/10 + 1.
-    #         # self.camera_position += ticks/10
-    #         self.update_view_matrix()
-    #     self.update()
+        if modifiers == Qt.ControlModifier | Qt.AltModifier:
+            if modifiers == Qt.ShiftModifier:
+                ticks /= 30
+            self.near_clip -= ticks
+            self.far_clip -= ticks
+            self.update_projection_matrix()
+        elif modifiers == Qt.AltModifier:
+            if modifiers == Qt.ShiftModifier:
+                ticks /= 30
+            new = max(0.1,self.near_clip - ticks)
+            if new <= self.far_clip:
+                self.near_clip = new
+                self.update_projection_matrix()
+        elif modifiers == Qt.ControlModifier:
+            if modifiers == Qt.ShiftModifier:
+                ticks /= 30
+            new = min(1000,self.far_clip - ticks)
+            if new >= self.near_clip:
+                self.far_clip = new
+                self.update_projection_matrix()
+        elif modifiers == Qt.ShiftModifier:
+            if self.projection_mode == 'perspective':
+                old_fov = self.fov
+                # do `dolly zooming` so that world appears at same size after canging fov
+                self.fov = max(5.,self.fov + ticks)
+                self.fov = min(120.,self.fov)
+                self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
+                self.update_projection_matrix()
+                self.update_view_matrix()
+        elif modifiers == Qt.MetaModifier:
+            self.camera_position += ticks/10
+            self.update_view_matrix()
+        else:
+            self.scale *= ticks/10 + 1.
+            # self.camera_position += ticks/10
+            self.update_view_matrix()
+        self.update()
 
-    # def on_mouse_move(self, window, pos_x, pos_y):
-    #     if glfw.get_key(self.window, glfw.KEY_LEFT_SHIFT):
-    #         x0,y0 = self.last_mouse_pos
-    #         x1,y1 = pos_x, pos_y
-    #         dx, dy = (x1-x0), (y1-y0)
-    #         #scale to zero plane in projection frustrum
-    #         if self.projection_mode == 'perspective':
-    #             scale = -self.camera_position * math.tan(math.radians(self.fov/2.))
-    #             dx, dy = scale*dx, scale*dy
-    #             #multiply with inverse view matrix and apply translation in world coordinates
-    #             self.translation += np.array([dx/self.radius, -dy/self.radius, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
-    #         elif self.projection_mode == 'orthographic':
-    #             # this is not fully correct
-    #             self.translation += self.modelscale * np.array([dx, -dy, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
+    def mouseMoveEvent(self, event):
+        modifiers = event.modifiers()
+        buttons = event.buttons()
+        pos_x, pos_y = event.x(), event.y()
+
+        if Qt.ShiftModifier == modifiers:
+            x0,y0 = self.last_mouse_pos
+            x1,y1 = pos_x, pos_y
+            dx, dy = (x1-x0), (y1-y0)
+            #scale to zero plane in projection frustrum
+            if self.projection_mode == 'perspective':
+                scale = -self.camera_position * math.tan(math.radians(self.fov/2.))
+                dx, dy = scale*dx, scale*dy
+                #multiply with inverse view matrix and apply translation in world coordinates
+                self.translation += np.array([dx/self.radius, -dy/self.radius, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
+            elif self.projection_mode == 'orthographic':
+                # this is not fully correct
+                self.translation += self.modelscale * np.array([dx, -dy, 0., 0.]).dot( np.linalg.inv(self.view)) [:3]
             
-    #         self.hud_program.is_visible = True
-    #     elif glfw.get_mouse_button(self.window, glfw.MOUSE_BUTTON_LEFT):
-    #         x0,y0 = self.screen2view(*self.last_mouse_pos)
-    #         x1,y1 = self.screen2view(pos_x, pos_y)
+            self.hud_program.is_visible = True
+        elif Qt.LeftButton == buttons:
+            x0,y0 = self.screen2view(*self.last_mouse_pos)
+            x1,y1 = self.screen2view(pos_x, pos_y)
 
-    #         v0 = q.arcball(x0, y0)
-    #         v1 = q.arcball(x1, y1)
+            v0 = q.arcball(x0, y0)
+            v1 = q.arcball(x1, y1)
 
-    #         self.rotation = q.product(v1, v0, self.rotation)
+            self.rotation = q.product(v1, v0, self.rotation)
 
-    #         self.hud_program.is_visible = True
-    #     else:
-    #         self.hud_program.is_visible = False
-    #     self.update_view_matrix()
-    #     self.update()
+            self.hud_program.is_visible = True
+        else:
+            self.hud_program.is_visible = False
+        self.update_view_matrix()
+        self.update()
 
-    #     self.last_mouse_pos = pos_x, pos_y
+        self.last_mouse_pos = pos_x, pos_y
 
     def update(self):
-        self.on_draw()
+        self.render()
 
 
 if __name__ == '__main__':

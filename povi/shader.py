@@ -130,8 +130,8 @@ class CrossHairProgram(SimpleShaderProgram):
     hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
     hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
 
-    def __init__(self):
-        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
+    def __init__(self, **args):
+        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, **args)
         self.initialise()
         self.setAttributes(self.hud_data)
 
