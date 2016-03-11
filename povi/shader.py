@@ -381,9 +381,7 @@ class LineShaderProgram(SimpleShaderProgram):
         #     self.attributes += "attribute float a_intensity;\n"
 
         super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES, **args)
-        if not args.has_key('color'):
-            self.color = (1,0,0)
-        else:
+        if args.has_key('color'):
             self.color = args['color']
         self.initialise()
 

@@ -45,6 +45,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 """
 
     def __init__(self, parent=None):
+        self.app = QApplication([])
         super(App, self).__init__(parent)
 
 
@@ -61,40 +62,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.create()
 
         size = 720, 720
-
-        # # Initialize the library
-        # if not glfw.init():
-        #     return
-        # # Create a windowed mode window and its OpenGL context
-        # glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 3)
-        # glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
-        # glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
-        # glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-        # self.window = glfw.create_window(size[0], size[1], "PoVi", None, None)
-        # if not self.window:
-        #     glfw.terminate()
-        #     return
-
-        # # Make the window's context current
-        # glfw.make_context_current(self.window)
-        # glfw.swap_interval(1)
-
-        # # glfw.set_window_refresh_callback(self.window, self.on_draw)
-        # glfw.set_framebuffer_size_callback(self.window, self.on_resize)
-        # glfw.set_key_callback(self.window, self.on_key_press)
-        # # glfw.set_mouse_button_callback(self.window, self.on_mouse_button)
-        # glfw.set_scroll_callback(self.window, self.on_mouse_wheel)
-        # glfw.set_cursor_pos_callback(self.window, self.on_mouse_move)
-        # # glfw.set_window_close_callback(self.window, self._on_close)
-
-        # if self.m_context is None:
-        self.m_context = QOpenGLContext(self)
-        # self.m_context.setFormat(QSurfaceFormat.defaultFormat())
-        self.m_context.setFormat(format)
-        self.m_context.create()
-
-        
-        # import ipdb; ipdb.set_trace()
+        self.resize(*size)
 
         self.context.makeCurrent(self)
         self.hud_program = CrossHairProgram()
@@ -127,6 +95,11 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         print(self.instructions)
 
+    def run(self):
+        self.initialize()
+        self.show()
+        self.app.exec_()
+
     def initialize(self):
         self.context.makeCurrent(self)
         self.set_bg()
@@ -144,7 +117,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         self.last_mouse_pos = 0,0
 
-        self.on_resize(self.window, *self.size)
+        # self.on_resize(self.window, *self.size)
 
     def render(self):
         if not self.isExposed():
@@ -189,19 +162,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def resizeEvent(self, event):
         print 'resize'
         self.render()
-
-
-    # def run(self):
-    #     self.on_initialize()
-    #     # Loop until the user closes the window
-    #     while not glfw.window_should_close(self.window):
-    #         # Render here, e.g. using pyOpenGL
-    #         self.on_draw()
-    #         # Swap front and back buffers
-    #         glfw.swap_buffers(self.window)
-    #         # Poll for and process events
-    #         glfw.wait_events()
-    #     glfw.terminate()
 
     def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
@@ -256,7 +216,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setAttributes(data)
         self.data_programs.append( program )
 
-    def add_data_source_line(self, coords_start, coords_end, color=(1,0,0)):
+    def add_data_source_line(self, coords_start, coords_end, **args):
         #interleave coordinates
         min_xy = np.nanmin( coords_start, axis=0 )
         max_xy = np.nanmax( coords_start, axis=0 )
@@ -274,7 +234,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         data = np.empty( 2*m, [('a_position', np.float32, 3)] )
         data['a_position'] = vertices
 
-        program = LineShaderProgram(color)
+        program = LineShaderProgram(**args)
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
@@ -467,10 +427,6 @@ if __name__ == '__main__':
 
     import sys
 
-    app = QApplication([])
     window = App()
-    # glQWindowWidget = QWidget.createWindowContainer(App, None,
-    # Qt.Widget)
-    window.resize(720, 720)
-    window.show()
-    app.exec_()
+    
+    window.run()
