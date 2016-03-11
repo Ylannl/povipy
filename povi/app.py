@@ -351,7 +351,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def wheelEvent(self, event):
     # def on_mouse_wheel(self, window, offset_x, offset_y):
         ticks = float(event.angleDelta().y())/50
-        print ticks
         modifiers = event.modifiers()
 
         if modifiers == Qt.ControlModifier | Qt.AltModifier:
