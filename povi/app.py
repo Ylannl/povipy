@@ -22,6 +22,11 @@ from linalg import quaternion as q
 from shader import *
 
 
+format = QSurfaceFormat()
+format.setVersion(3,3)
+format.setProfile(QSurfaceFormat.CompatibilityProfile)
+QSurfaceFormat.setDefaultFormat(format)
+
 class App(QWindow):
 
     instructions = """
@@ -46,11 +51,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def __init__(self, parent=None):
         super(App, self).__init__(parent)
         self.setSurfaceType(QWindow.OpenGLSurface)
-
-        self.glFormat = QSurfaceFormat()
-        self.glFormat.setVersion(3,3)
-        self.glFormat.setProfile(QSurfaceFormat.CompatibilityProfile)
-        QSurfaceFormat.setDefaultFormat(self.glFormat)
 
         self.m_context = None
 
@@ -84,7 +84,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         # if self.m_context is None:
         self.m_context = QOpenGLContext(self)
         # self.m_context.setFormat(QSurfaceFormat.defaultFormat())
-        self.m_context.setFormat(self.glFormat)
+        self.m_context.setFormat(format)
         self.m_context.create()
 
         
@@ -462,7 +462,6 @@ if __name__ == '__main__':
 
     app = QGuiApplication(sys.argv)
 
-    format = QSurfaceFormat()
     # format.setSamples(4)
 
     window = App()
