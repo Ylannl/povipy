@@ -180,7 +180,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setAttributes(data)
         self.data_programs.append( program )
 
-    def add_data_source_line(self, coords_start, coords_end, color=(1,0,0)):
+    def add_data_source_line(self, coords_start, coords_end, **args):
         #interleave coordinates
         min_xy = np.nanmin( coords_start, axis=0 )
         max_xy = np.nanmax( coords_start, axis=0 )
@@ -198,7 +198,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         data = np.empty( 2*m, [('a_position', np.float32, 3)] )
         data['a_position'] = vertices
 
-        program = LineShaderProgram(color)
+        program = LineShaderProgram(**args)
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)

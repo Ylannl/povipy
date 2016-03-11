@@ -11,9 +11,12 @@ import ctypes
 import numpy as np
 
 class SimpleShaderProgram(object):
-    def __init__(self, draw_type=gl.GL_POINTS, is_visible=False):
+    def __init__(self, draw_type=gl.GL_POINTS, **args):
         self.draw_type = draw_type
-        self.is_visible = is_visible
+        if args.has_key('is_visible'):
+            self.is_visible = args['is_visible']
+        else:
+            self.is_visible = False
         self.uniforms = {}
         self.color = (1,0,0)
 
@@ -44,10 +47,10 @@ class SimpleShaderProgram(object):
 
     def setAttributes(self, data):
         self.dataLen = data.shape[0]
-        # Make this buffer the default one        
+        # Make this buffer the default one
         gl.glBindVertexArray(self.VAO)
 
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)        
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         # Upload data
         gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
 
@@ -365,7 +368,7 @@ class PointShaderProgram(SimpleShaderProgram):
 
 class LineShaderProgram(SimpleShaderProgram):
 
-    def __init__(self, color=(1,0,0)):
+    def __init__(self, **args):
         self.do_blending = False
         # self.zmin, self.zmax = zrange
 
@@ -377,8 +380,11 @@ class LineShaderProgram(SimpleShaderProgram):
         # if 'with_intensity' in options:
         #     self.attributes += "attribute float a_intensity;\n"
 
-        super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES)
-        self.color = color
+        super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES, **args)
+        if not args.has_key('color'):
+            self.color = (1,0,0)
+        else:
+            self.color = args['color']
         self.initialise()
 
 ### triangle shader:
