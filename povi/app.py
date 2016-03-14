@@ -46,14 +46,15 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def __init__(self, parent=None):
         self.app = QApplication([])
         super(App, self).__init__(parent)
-
+        self.setSurfaceType(QWindow.OpenGLSurface)
 
         format = QSurfaceFormat()
         format.setVersion(3, 3)
         format.setProfile(QSurfaceFormat.CoreProfile)
         format.setStereo(False)
         format.setSwapBehavior(QSurfaceFormat.DoubleBuffer)
-        self.setSurfaceType(QWindow.OpenGLSurface)
+        format.setDepthBufferSize(24)
+        
         self.context = QOpenGLContext()
         self.context.setFormat(format)
         if not self.context.create():
@@ -65,7 +66,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         self.context.makeCurrent(self)
         self.hud_program = CrossHairProgram()
-        print 's'
 
         self.default_view = np.eye(4, dtype=np.float32)
         self.view = self.default_view
@@ -101,8 +101,12 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
     def initialize(self):
         self.context.makeCurrent(self)
-        self.set_bg()
+
+        gl.glDepthMask(gl.GL_TRUE)
+        gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glDepthFunc(gl.GL_LESS)
+
+        self.set_bg()
 
         view_width, view_height = map( lambda x:x/self.radius, self.size )
 
@@ -121,7 +125,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def render(self):
         if not self.isExposed():
             return
-
         self.context.makeCurrent(self)
 
         bits = 0
@@ -278,7 +281,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         return (x-width/2.)/self.radius, ((height-y)-height/2.)/self.radius
 
     def set_bg(self):
-        gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         if self.bg_white:
