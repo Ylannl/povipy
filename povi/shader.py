@@ -45,6 +45,11 @@ class SimpleShaderProgram(object):
         self.buffer = gl.glGenBuffers(1)
         self.VAO = gl.glGenVertexArrays(1)
 
+    def delete(self):
+        # gl.glDeleteVertexArrays(1, self.VAO)
+        # gl.glDeleteBuffers(1, self.buffer)
+        gl.glDeleteProgram(self.program)
+
     def setAttributes(self, data):
         self.dataLen = data.shape[0]
         # Make this buffer the default one

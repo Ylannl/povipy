@@ -12,7 +12,7 @@ from time import time
 
 import OpenGL.GL as gl
 
-
+from PyQt5 import uic
 from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
 from PyQt5.QtWidgets import QApplication
@@ -22,7 +22,23 @@ from transforms import perspective, ortho, scale, translate, rotate, xrotate, yr
 from linalg import quaternion as q
 from shader import *
 
-class App(QWindow):
+class App(QApplication):
+
+    def __init__(self, args=[]):
+        # self.app = QApplication([])
+        super(App, self).__init__(args)
+
+        self.viewerWindow = ViewerWindow()
+        self.add_data_source = self.viewerWindow.add_data_source
+        self.add_data_source_line = self.viewerWindow.add_data_source_line
+        self.add_data_source_line = self.viewerWindow.add_data_source_line
+        self.data_programs = self.viewerWindow.data_programs
+
+    def run(self):
+        self.viewerWindow.run()
+        self.exec_()
+
+class ViewerWindow(QWindow):
 
     instructions = """
 --Key controls
@@ -44,8 +60,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 """
 
     def __init__(self, parent=None):
-        self.app = QApplication([])
-        super(App, self).__init__(parent)
+        super(ViewerWindow, self).__init__(parent)
         self.setSurfaceType(QWindow.OpenGLSurface)
 
         format = QSurfaceFormat()
@@ -72,7 +87,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.model = np.eye(4, dtype=np.float32)
         self.projection = np.eye(4, dtype=np.float32)
 
-        self.data_programs = []
+        self.data_programs = {}
 
         self.multiview = True
 
@@ -97,7 +112,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def run(self):
         self.initialize()
         self.show()
-        self.app.exec_()
 
     def initialize(self):
         self.context.makeCurrent(self)
@@ -111,7 +125,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         view_width, view_height = map( lambda x:x/self.radius, self.size )
 
         translate(self.model, -self.data_center[0], -self.data_center[1], -self.data_center[2])
-        for program in self.data_programs:
+        for program in self.data_programs.values():
             program.setUniform('u_model', self.model)
 
         self.modelscale = .6* 2*min(2.*view_width/self.data_width, 2.*view_height/self.data_height)
@@ -134,7 +148,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         gl.glClear(bits)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         
-        for program in self.data_programs:
+        for program in self.data_programs.values():
             if program.do_blending:
                 if self.bg_white:
                     gl.glEnable(gl.GL_BLEND)
@@ -157,7 +171,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             self.render()
             return True
 
-        return super(App, self).event(event)
+        return super(ViewerWindow, self).event(event)
 
     def exposeEvent(self, event):
         self.render()
@@ -200,7 +214,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         max_xy = np.nanmax( data['a_position'], axis=0 )
         # print min_xy
         # print max_xy
-        if len(self.data_programs) == 0:
+        if len(self.data_programs.values()) == 0:
             self.data_width = max_xy[0] - min_xy[0]
             self.data_height = max_xy[1] - min_xy[1]
             self.data_depth = max_xy[2] - min_xy[2]
@@ -218,13 +232,15 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
         program.setAttributes(data)
-        self.data_programs.append( program )
+        self.data_programs[program.program] = program
+
+        return program 
 
     def add_data_source_line(self, coords_start, coords_end, **args):
         #interleave coordinates
         min_xy = np.nanmin( coords_start, axis=0 )
         max_xy = np.nanmax( coords_start, axis=0 )
-        if len(self.data_programs) == 0:
+        if len(self.data_programs.values()) == 0:
             self.data_width = max_xy[0] - min_xy[0]
             self.data_height = max_xy[1] - min_xy[1]
             self.data_depth = max_xy[2] - min_xy[2]
@@ -243,14 +259,18 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
         program.setAttributes(data)
-        self.data_programs.append( program )       
+        self.data_programs[program.program] = program
+
+        return program 
 
     def add_data_source_ball(self, points, radii, color=(0,1,0)):
         program = BallShaderProgram(points, radii, color)
         program['u_model'] = self.model
         program['u_view'] = self.view
         program['u_projection'] = self.projection
-        self.data_programs.append( program )
+        self.data_programs[program.program] = program
+
+        return program 
 
     def update_view_matrix(self):
         self.view = np.eye(4, dtype=np.float32)
@@ -259,7 +279,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.view = self.view.dot( np.array(q.matrix(self.rotation), dtype=np.float32) )
         # translate(self.view, -self.translation[0], -self.translation[1], -self.translation[2] )
         translate(self.view, 0,0, self.camera_position)
-        for program in self.data_programs:
+        for program in self.data_programs.values():
             program.setUniform('u_view', self.view)
             if program.draw_type == gl.GL_POINTS:
                 program.setUniform('u_model_scale', self.scale)
@@ -272,7 +292,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         elif self.projection_mode == 'perspective':
             self.projection = perspective(self.fov, view_width / float(view_height), self.near_clip, self.far_clip)
 
-        for program in self.data_programs:
+        for program in self.data_programs.values():
             program.setUniform('u_projection', self.projection)
 
     def screen2view(self, x,y):
@@ -284,10 +304,10 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         gl.glEnable(gl.GL_BLEND)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         if self.bg_white:
-            gl.glClearColor(0.85,0.85,0.85,1)
+            gl.glClearColor(0.95,0.95,0.95,1)
             # gloo.set_state('translucent', clear_color=np.array([1,1,1,1]) )
         else:
-            gl.glClearColor(0.15,0.15,0.15,1)
+            gl.glClearColor(0.05,0.05,0.05,1)
             # gloo.set_state('translucent', clear_color=np.array([0.15,0.15,0.15,1]) )
 
     def keyPressEvent(self, event):
@@ -304,17 +324,17 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             self.update_view_matrix()
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
-            for program in self.data_programs:
+            for program in self.data_programs.values():
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == Qt.Key_Equal:
-            for program in self.data_programs:
+            for program in self.data_programs.values():
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == Qt.Key_B:
-            for program in self.data_programs:
+            for program in self.data_programs.values():
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.do_blending = not program.do_blending
         elif key == Qt.Key_T:
@@ -331,11 +351,11 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             self.set_bg()
         elif Qt.Key_0 <= key <= Qt.Key_9:
             i = int(chr(key))-1
-            if i < len(self.data_programs):
+            if i < len(self.data_programs.values()):
                 if self.multiview:
-                    self.data_programs[i].toggle_visibility()
+                    self.data_programs.values()[i].toggle_visibility()
                 else:
-                    for pi, prog in enumerate(self.data_programs):
+                    for pi, prog in enumerate(self.data_programs.values()):
                         prog.is_visible = False
                         if pi == i:
                             prog.is_visible = True

@@ -2,7 +2,7 @@ from time import time
 import sys
 
 import numpy as np
-from povi import App
+from povi import MatApp as App
 from pointio import io_npy
 
 import click
