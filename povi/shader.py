@@ -50,7 +50,11 @@ class SimpleShaderProgram(object):
         # gl.glDeleteBuffers(1, self.buffer)
         gl.glDeleteProgram(self.program)
 
-    def updateAttributes(self):
+    def updateAttributes(self, filter):
+        if filter == None:
+            data = self.data
+        else:
+            data = self.data[filter]
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, self.data, gl.GL_DYNAMIC_DRAW)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
@@ -170,7 +174,7 @@ class CrossHairProgram(SimpleShaderProgram):
         """
 
 class PointShaderProgram(SimpleShaderProgram):
-    _all_modes = ['with_filter','with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
+    _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
     
     def __init__(self, options=['fixed_point'], **kwargs):
         self.zmin, self.zmax = kwargs['zrange']
@@ -182,8 +186,6 @@ class PointShaderProgram(SimpleShaderProgram):
                 self.defines += "#define {}\n".format(option)
         # import ipdb; ipdb.set_trace()
         self.attributes = ""
-        if 'with_filter' in options:
-            self.attributes += "in bool a_filter;\n"
         if 'with_normals' in options:
             self.attributes += "in vec3 a_normal;\n"
         if 'with_point_radius' in options:
