@@ -56,7 +56,7 @@ class SimpleShaderProgram(object):
         else:
             data = self.data[filter]
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, self.data, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
     def setAttributes(self, data):
