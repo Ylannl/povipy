@@ -50,11 +50,12 @@ class SimpleShaderProgram(object):
         # gl.glDeleteBuffers(1, self.buffer)
         gl.glDeleteProgram(self.program)
 
-    def updateAttributes(self, filter):
+    def updateAttributes(self, filter=None):
         if filter == None:
             data = self.data
         else:
             data = self.data[filter]
+        self.dataLen = data.shape[0]
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
