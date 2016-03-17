@@ -51,7 +51,7 @@ class SimpleShaderProgram(object):
         gl.glDeleteProgram(self.program)
 
     def updateAttributes(self, filter=None):
-        if filter == None:
+        if filter is None:
             data = self.data
         else:
             data = self.data[filter]

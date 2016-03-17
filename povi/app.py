@@ -118,6 +118,16 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             listener(name, is_visible)
         self.data_programs[name].is_visible = is_visible
 
+    def center_view(self, center=None):
+        if center is None:
+            center = self.data_center
+        self.translation = np.zeros(3)
+        self.model = np.eye(4, dtype=np.float32)
+        translate(self.model, -center[0], -center[1], -center[2])
+        for program in self.data_programs.values():
+            program.setUniform('u_model', self.model)
+        self.update_view_matrix()
+
     def initialize(self):
         self.context.makeCurrent(self)
 
@@ -323,11 +333,10 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             self.view = np.eye(4, dtype=np.float32)
             self.rotation = q.quaternion()
             self.scale = self.modelscale
-            self.translation = np.zeros(3)
             self.camera_position = -12.
             self.near_clip = 2.
             self.far_clip = 100.
-            self.update_view_matrix()
+            self.center_view()
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
             for program in self.data_programs.values():
