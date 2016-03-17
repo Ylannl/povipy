@@ -9,6 +9,7 @@
 import numpy as np
 import math
 from time import time
+from collections import OrderedDict
 
 import OpenGL.GL as gl
 
@@ -30,7 +31,6 @@ class App(QApplication):
 
         self.viewerWindow = ViewerWindow()
         self.add_data_source = self.viewerWindow.add_data_source
-        self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.data_programs = self.viewerWindow.data_programs
 
@@ -87,7 +87,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.model = np.eye(4, dtype=np.float32)
         self.projection = np.eye(4, dtype=np.float32)
 
-        self.data_programs = {}
+        self.data_programs = OrderedDict()
 
         self.multiview = True
 
@@ -181,7 +181,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.on_resize(size.width(), size.height())
         self.render()
 
-    def add_data_source(self, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
+    def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
 
@@ -232,11 +232,12 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
         program.setAttributes(data)
-        self.data_programs[program.program] = program
 
-        return program 
+        self.data_programs[name] = program
 
-    def add_data_source_line(self, coords_start, coords_end, **args):
+        return program
+
+    def add_data_source_line(self, name, coords_start, coords_end, **args):
         #interleave coordinates
         min_xy = np.nanmin( coords_start, axis=0 )
         max_xy = np.nanmax( coords_start, axis=0 )
@@ -259,18 +260,18 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
         program.setAttributes(data)
-        self.data_programs[program.program] = program
+        self.data_programs[name] = program
 
-        return program 
+        return program
 
-    def add_data_source_ball(self, points, radii, color=(0,1,0)):
+    def add_data_source_ball(self, name, points, radii, color=(0,1,0)):
         program = BallShaderProgram(points, radii, color)
         program['u_model'] = self.model
         program['u_view'] = self.view
         program['u_projection'] = self.projection
-        self.data_programs[program.program] = program
+        self.data_programs[name] = program
 
-        return program 
+        return program
 
     def update_view_matrix(self):
         self.view = np.eye(4, dtype=np.float32)
