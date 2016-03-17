@@ -89,7 +89,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
         self.data_programs = OrderedDict()
         self.visibility_toggle_listeners = []
-        
         self.multiview = True
 
         self.rotation = q.quaternion()
