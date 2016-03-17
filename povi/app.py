@@ -88,7 +88,8 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         self.projection = np.eye(4, dtype=np.float32)
 
         self.data_programs = OrderedDict()
-
+        self.visibility_toggle_listeners = []
+        
         self.multiview = True
 
         self.rotation = q.quaternion()
@@ -112,6 +113,11 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
     def run(self):
         self.initialize()
         self.show()
+
+    def set_layer_visibility(self, name, is_visible):
+        for listener in self.visibility_toggle_listeners:
+            listener(name, is_visible)
+        self.data_programs[name].is_visible = is_visible
 
     def initialize(self):
         self.context.makeCurrent(self)
@@ -352,9 +358,9 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             self.set_bg()
         elif Qt.Key_0 <= key <= Qt.Key_9:
             i = int(chr(key))-1
-            if i < len(self.data_programs.values()):
+            if i < len(self.data_programs.keys()):
                 if self.multiview:
-                    self.data_programs.values()[i].toggle_visibility()
+                    self.set_layer_visibility(self.data_programs.keys()[i], not self.data_programs.values()[i].is_visible)
                 else:
                     for pi, prog in enumerate(self.data_programs.values()):
                         prog.is_visible = False
