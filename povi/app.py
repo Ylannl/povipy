@@ -266,8 +266,6 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         vertices = np.empty((m*2,n), dtype=coords_start.dtype)
         vertices[0::2] = coords_start
         vertices[1::2] = coords_end
-
-        print name, vertices.shape
       
         data = np.empty( 2*m, [('a_position', np.float32, 3)] )
         data['a_position'] = vertices
