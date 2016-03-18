@@ -50,13 +50,13 @@ l       - light/dark background
 -       - decrease point size
 
 --Mouse controls
-drag            - rotate dataset (arcball)
-shift + move    - translate dataset
-scroll          - scale dataset
-shift + scroll  - change field of view
-a + scroll      - move far clipping plane (+ shift for more precision)
-z + scroll      - move near clipping plane (+ shift for more precision)
-a + z + scroll  - move far and near clipping plane simultaniously (+ shift for more precision)
+drag                 - rotate dataset (arcball)
+shift + move         - translate dataset
+scroll               - scale dataset
+shift + scroll       - change field of view
+ctrl + scroll        - move far clipping plane
+alt + scroll         - move near clipping plane
+ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift for more precision)
 """
 
     def __init__(self, parent=None):
@@ -394,21 +394,21 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         modifiers = event.modifiers()
 
         if modifiers == Qt.ControlModifier | Qt.AltModifier:
-            if modifiers == Qt.ShiftModifier:
-                ticks /= 30
+            # if modifiers == Qt.ShiftModifier:
+            ticks /= 30
             self.near_clip -= ticks
             self.far_clip -= ticks
             self.update_projection_matrix()
         elif modifiers == Qt.AltModifier:
-            if modifiers == Qt.ShiftModifier:
-                ticks /= 30
+            # if modifiers == Qt.ShiftModifier:
+            ticks /= 30
             new = max(0.1,self.near_clip - ticks)
             if new <= self.far_clip:
                 self.near_clip = new
                 self.update_projection_matrix()
         elif modifiers == Qt.ControlModifier:
-            if modifiers == Qt.ShiftModifier:
-                ticks /= 30
+            # if modifiers == Qt.ShiftModifier:
+            ticks /= 30
             new = min(1000,self.far_clip - ticks)
             if new >= self.near_clip:
                 self.far_clip = new
