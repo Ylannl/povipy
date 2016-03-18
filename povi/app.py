@@ -243,6 +243,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
             zmin, zmax = min_xy[2], max_xy[2]
         # for mode in modes:
         program = PointShaderProgram(options=opts, zrange=(zmin, zmax), **kwargs)
+        program.name = name
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
@@ -271,6 +272,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
         data['a_position'] = vertices
 
         program = LineShaderProgram(**args)
+        program.name = name
         program.setUniform('u_model', self.model)
         program.setUniform('u_view', self.view)
         program.setUniform('u_projection', self.projection)
@@ -281,6 +283,7 @@ a + z + scroll  - move far and near clipping plane simultaniously (+ shift for m
 
     def add_data_source_ball(self, name, points, radii, color=(0,1,0)):
         program = BallShaderProgram(points, radii, color)
+        program.name = name
         program['u_model'] = self.model
         program['u_view'] = self.view
         program['u_projection'] = self.projection
