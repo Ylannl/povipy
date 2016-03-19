@@ -312,8 +312,8 @@ class PointShaderProgram(SimpleShaderProgram):
                 v_normal = u_view * u_model * vec4(a_normal, 0);
                 v_normal = normalize(v_normal);
 
-                vec4 lighting_direction = vec4(0,1,1,0);
-                v_lightpwr = clamp(abs(dot(v_normal, normalize(lighting_direction))), 0, 1);
+                vec4 lighting_direction = vec4(1,1,1,0);
+                v_lightpwr = clamp(abs(dot(v_normal, normalize(lighting_direction))), 0.3, 1);
             #else
                 v_lightpwr = 1.0;
             #endif
@@ -371,9 +371,9 @@ class PointShaderProgram(SimpleShaderProgram):
             //color =  vec4(color_scheme(v_color_intensity), alpha);
             //#else if defined(with_texture)
             #if defined(fixed_color)
-                color =  vec4({color[0]}, {color[1]}, {color[2]}, 1);
+                color =  v_lightpwr*vec4({color[0]}, {color[1]}, {color[2]}, 1);
             #else
-                color =  texture(u_color_ramp, v_color_intensity);
+                color =  v_lightpwr*texture(u_color_ramp, v_color_intensity);
             #endif
             gl_FragDepth = gl_FragCoord.z + 0.002*(1.0-pow(c, 1.0)) * gl_FragCoord.w;
             
