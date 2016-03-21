@@ -19,7 +19,7 @@ class MatApp(App):
 class ToolsDialog(QToolBox):
     def __init__(self, parent=None):
         super(ToolsDialog, self).__init__(parent)
-        self.ui = uic.loadUi('povi/tools.ui', self)
+        self.ui = uic.loadUi('./tools.ui', self)
 
         self.ui.slider_tcount.valueChanged.connect(self.slot_tcount)
         # import ipdb; ipdb.set_trace()        
