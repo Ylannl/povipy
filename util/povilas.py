@@ -30,17 +30,19 @@ def las(input, limit):
     
     points = np.stack((lasfile.get_x_scaled(), lasfile.get_y_scaled(), lasfile.get_z_scaled()), axis=1) - offset
     c.add_data_source(
+        name='elevation',
         opts=['splat_point'],
         points=points[filt],
         colormap='terrain'
     )
-    c.data_programs[0].toggle_visibility()
+    c.data_programs['elevation'].toggle_visibility()
 
     try:
         intensity = lasfile.get_intensity().astype(np.float32)
         intensity = np.clip(intensity, 0, 600)
         if intensity.max() == 0: raise LaspyException
         c.add_data_source(
+            name='intensity',
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             intensity=intensity[filt],
@@ -53,6 +55,7 @@ def las(input, limit):
         classification = lasfile.get_classification()
         if classification.max() == 0: raise LaspyException
         c.add_data_source(
+            name='clasification',
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             category=classification.astype(np.float32)[filt],
@@ -65,6 +68,7 @@ def las(input, limit):
         return_num = lasfile.get_return_num().astype(np.float32)
         if return_num.max() == 1: raise LaspyException
         c.add_data_source(
+            name='return number',
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             intensity=return_num[filt],
@@ -77,6 +81,7 @@ def las(input, limit):
         scan_angle_rank = lasfile.get_scan_angle_rank().astype(np.float32)
         if scan_angle_rank.max() == 0: raise LaspyException
         c.add_data_source(
+            name='scan angle rank',
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             intensity=scan_angle_rank[filt],
@@ -90,6 +95,7 @@ def las(input, limit):
         if gps_time.max() == 0: raise LaspyException
         gps_time[np.argsort(gps_time)] = np.arange(count)
         c.add_data_source(
+            name='gps time',
             opts=['splat_point', 'with_intensity'],
             points=points[filt],
             intensity=gps_time[filt],
