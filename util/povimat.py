@@ -1,6 +1,6 @@
 from time import time
 import sys
-
+import math
 import numpy as np
 from povi import App
 from pointio import io_npy
@@ -68,7 +68,7 @@ def mat(input, min_r, max_r):
         opts=['splat_disk', 'with_normals'],
         points=ma.D['coords'], normals=ma.D['normals']
     )
-    
+
     if ma.D.has_key('decimate_lfs'):
         f = ma.D['decimate_lfs']
         c.add_data_source(
@@ -77,6 +77,7 @@ def mat(input, min_r, max_r):
             intensity=ma.D['lfs'],
             points=ma.D['coords'], normals=ma.D['normals']
         )
+        
         c.add_data_source(
             name = 'Surface points decimated',
             opts=['splat_disk', 'with_normals'],
