@@ -1,4 +1,4 @@
-from app import App
+from .app import App
 
 from PyQt5 import uic
 from PyQt5.QtWidgets import QToolBox
@@ -25,4 +25,4 @@ class ToolsDialog(QToolBox):
         # import ipdb; ipdb.set_trace()        
 
     def slot_tcount(self, value):
-        print 'tcount', value
+        print('tcount', value)

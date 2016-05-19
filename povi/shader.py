@@ -13,7 +13,7 @@ import numpy as np
 class SimpleShaderProgram(object):
     def __init__(self, draw_type=gl.GL_POINTS, **args):
         self.draw_type = draw_type
-        if args.has_key('is_visible'):
+        if 'is_visible' in args:
             self.is_visible = args['is_visible']
         else:
             self.is_visible = False
@@ -25,7 +25,7 @@ class SimpleShaderProgram(object):
             gl.glShaderSource(handle, shader_source)
             gl.glCompileShader(handle)
             if not gl.glGetShaderiv(handle, gl.GL_COMPILE_STATUS):
-                print gl.glGetShaderInfoLog(handle)
+                print(gl.glGetShaderInfoLog(handle))
 
         self.program = gl.glCreateProgram()
         vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
@@ -196,7 +196,7 @@ class PointShaderProgram(SimpleShaderProgram):
         # import ipdb; ipdb.set_trace()
 
         super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
-        if kwargs.has_key('color'):
+        if 'color' in kwargs:
             self.color = kwargs['color']
         self.initialise()
 
@@ -209,7 +209,7 @@ class PointShaderProgram(SimpleShaderProgram):
             self.do_blending = True
 
         colormap = 'jet'
-        if kwargs.has_key('colormap'):
+        if 'colormap' in kwargs:
             colormap = kwargs['colormap']
         self.texture = self.create_colormap(scheme=colormap)
         
@@ -232,7 +232,7 @@ class PointShaderProgram(SimpleShaderProgram):
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         else:
-            from colormaps import cm
+            from .colormaps import cm
             image = np.array(cm[scheme], dtype=np.float32)
 
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
@@ -397,7 +397,7 @@ class LineShaderProgram(SimpleShaderProgram):
         #     self.attributes += "attribute float a_intensity;\n"
 
         super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES, **args)
-        if args.has_key('color'):
+        if 'color' in args:
             self.color = args['color']
         self.initialise()
 

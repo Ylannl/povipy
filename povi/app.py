@@ -18,10 +18,10 @@ from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
 from PyQt5.QtWidgets import QApplication
 
-from transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
+from .transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
-from linalg import quaternion as q
-from shader import *
+from .linalg import quaternion as q
+from .shader import *
 
 class App(QApplication):
 
@@ -107,7 +107,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         self.bg_white = False
         self.viewpoint_dict = {}
 
-        print(self.instructions)
+        print((self.instructions))
 
     def run(self):
         self.initialize()
@@ -124,7 +124,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         self.translation = np.zeros(3)
         self.model = np.eye(4, dtype=np.float32)
         translate(self.model, -center[0], -center[1], -center[2])
-        for program in self.data_programs.values():
+        for program in list(self.data_programs.values()):
             program.setUniform('u_model', self.model)
         self.update_view_matrix()
 
@@ -137,10 +137,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
 
         self.set_bg()
 
-        view_width, view_height = map( lambda x:x/self.radius, self.size )
+        view_width, view_height = [x/self.radius for x in self.size]
 
         translate(self.model, -self.data_center[0], -self.data_center[1], -self.data_center[2])
-        for program in self.data_programs.values():
+        for program in list(self.data_programs.values()):
             program.setUniform('u_model', self.model)
 
         self.modelscale = .6* 2*min(2.*view_width/self.data_width, 2.*view_height/self.data_height)
@@ -163,7 +163,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         gl.glClear(bits)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         
-        for program in self.data_programs.values():
+        for program in list(self.data_programs.values()):
             if program.do_blending:
                 if self.bg_white:
                     gl.glEnable(gl.GL_BLEND)
@@ -229,7 +229,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         max_xy = np.nanmax( data['a_position'], axis=0 )
         # print min_xy
         # print max_xy
-        if len(self.data_programs.values()) == 0:
+        if len(list(self.data_programs.values())) == 0:
             self.data_width = max_xy[0] - min_xy[0]
             self.data_height = max_xy[1] - min_xy[1]
             self.data_depth = max_xy[2] - min_xy[2]
@@ -257,7 +257,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         #interleave coordinates
         min_xy = np.nanmin( coords_start, axis=0 )
         max_xy = np.nanmax( coords_start, axis=0 )
-        if len(self.data_programs.values()) == 0:
+        if len(list(self.data_programs.values())) == 0:
             self.data_width = max_xy[0] - min_xy[0]
             self.data_height = max_xy[1] - min_xy[1]
             self.data_depth = max_xy[2] - min_xy[2]
@@ -298,20 +298,20 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
         self.view = self.view.dot( np.array(q.matrix(self.rotation), dtype=np.float32) )
         # translate(self.view, -self.translation[0], -self.translation[1], -self.translation[2] )
         translate(self.view, 0,0, self.camera_position)
-        for program in self.data_programs.values():
+        for program in list(self.data_programs.values()):
             program.setUniform('u_view', self.view)
             if program.draw_type == gl.GL_POINTS:
                 program.setUniform('u_model_scale', self.scale)
 
     def update_projection_matrix(self):
-        view_width, view_height = map( lambda x:x/self.radius, self.size )
+        view_width, view_height = [x/self.radius for x in self.size]
 
         if self.projection_mode == 'orthographic':
             self.projection = ortho(-view_width, view_width, -view_height, view_height, self.near_clip, self.far_clip)
         elif self.projection_mode == 'perspective':
             self.projection = perspective(self.fov, view_width / float(view_height), self.near_clip, self.far_clip)
 
-        for program in self.data_programs.values():
+        for program in list(self.data_programs.values()):
             program.setUniform('u_projection', self.projection)
 
     def screen2view(self, x,y):
@@ -342,17 +342,17 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
             self.center_view()
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
-            for program in self.data_programs.values():
+            for program in list(self.data_programs.values()):
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == Qt.Key_Equal:
-            for program in self.data_programs.values():
+            for program in list(self.data_programs.values()):
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == Qt.Key_B:
-            for program in self.data_programs.values():
+            for program in list(self.data_programs.values()):
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.do_blending = not program.do_blending
         elif key == Qt.Key_T:
@@ -369,9 +369,9 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift 
             self.set_bg()
         elif Qt.Key_0 <= key <= Qt.Key_9:
             i = int(chr(key))-1
-            if i < len(self.data_programs.keys()):
+            if i < len(list(self.data_programs.keys())):
                 if self.multiview:
-                    self.set_layer_visibility(self.data_programs.keys()[i], not self.data_programs.values()[i].is_visible)
+                    self.set_layer_visibility(list(self.data_programs.keys())[i], not list(self.data_programs.values())[i].is_visible)
                 else:
                     for pi, prog in enumerate(self.data_programs.values()):
                         prog.is_visible = False

@@ -19,11 +19,11 @@ def las(input, limit):
     count = lasfile.header.count
     offset = mi + (ma - mi)
     offset[2] = 0
-    print "{} points loaded from file in {} s".format(count, time()-t0)
+    print("{} points loaded from file in {} s".format(count, time()-t0))
     
     filt = np.random.random(count) < (limit / count)
     thin_count = np.sum(filt)
-    print "{} points remaining after thinning [factor: {:.2f}]".format(thin_count, float(thin_count)/count)
+    print("{} points remaining after thinning [factor: {:.2f}]".format(thin_count, float(thin_count)/count))
 
     c = App()
     c.multiview = False
