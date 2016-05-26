@@ -16,7 +16,7 @@ import OpenGL.GL as gl
 from PyQt5 import uic
 from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QWidget, QToolBox
 
 from .transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
 
@@ -30,13 +30,55 @@ class App(QApplication):
         super(App, self).__init__(args)
 
         self.viewerWindow = ViewerWindow()
+        self.dialog = None
+        
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.data_programs = self.viewerWindow.data_programs
+        
+        self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
 
     def run(self):
         self.viewerWindow.run()
+        if self.dialog is None:
+            self.dialog = ToolsDialog(self)
+        self.dialog.show()
         self.exec_()
+        
+    def set_layer_visibility(self, name, is_visible):
+        items = self.dialog.ui.listWidget_layers.findItems(name,Qt.MatchExactly)
+        for item in items:
+            item.setSelected(is_visible)
+        
+    def set_layer_selection(self):
+        selected_names = [item.data(0) for item in self.dialog.ui.listWidget_layers.selectedItems()]
+        for name, program in self.viewerWindow.data_programs.items():
+            if name in selected_names:
+                program.is_visible = True
+            elif not name.startswith('graph'):
+                program.is_visible = False
+        self.viewerWindow.render()
+
+class ToolsDialog(QWidget):
+    def __init__(self, app, parent=None):
+        super(ToolsDialog, self).__init__(parent)
+        self.ui = uic.loadUi('/Users/ravi/git/povipy/povi/tools.ui', self)
+        self.app = app
+
+        # populate datalayers list
+        # print self.app.viewerWindow.data_programs.keys()
+        l=[]
+        for program_name in list(self.app.viewerWindow.data_programs.keys()):
+            if not program_name.startswith('graph'):
+                l.append(program_name)
+        self.ui.listWidget_layers.addItems(l)
+
+        # self.ui.doubleSpinBox_filterRadius.valueChanged.connect(self.app.update_radius)
+        # self.ui.spinBox_linkcount.valueChanged.connect(self.app.filter_linkcount)
+        # self.ui.pushButton_regraph.clicked.connect(self.app.draw_graphs)
+        # self.ui.groupBox_component.clicked.connect(self.app.filter_component_all)
+        # self.ui.comboBox_component.activated.connect(self.app.filter_component)
+        self.ui.listWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
 
 class ViewerWindow(QWindow):
 
@@ -56,7 +98,7 @@ scroll               - scale dataset
 shift + scroll       - change field of view
 ctrl + scroll        - move far clipping plane
 alt + scroll         - move near clipping plane
-ctrl + alt + scroll  - move far and near clipping plane simultaniously (+ shift for more precision)
+ctrl + alt + scroll  - move far and near clipping plane simultaniously
 """
 
     def __init__(self, parent=None):
