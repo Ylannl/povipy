@@ -8,6 +8,7 @@
 
 import numpy as np
 import math
+import os
 from time import time
 from collections import OrderedDict
 
@@ -62,7 +63,7 @@ class App(QApplication):
 class ToolsDialog(QWidget):
     def __init__(self, app, parent=None):
         super(ToolsDialog, self).__init__(parent)
-        self.ui = uic.loadUi('/Users/ravi/git/povipy/povi/tools.ui', self)
+        self.ui = uic.loadUi(os.path.join(os.path.dirname(__file__),'tools.ui'), self)
         self.app = app
 
         # populate datalayers list
