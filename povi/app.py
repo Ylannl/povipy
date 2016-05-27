@@ -118,6 +118,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         if not self.context.create():
             raise Exception('self.context.create() failed')
         self.create()
+        import ipdb; ipdb.set_trace()
 
         size = 720, 720
         self.resize(*size)
