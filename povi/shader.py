@@ -13,7 +13,7 @@ import numpy as np
 class SimpleShaderProgram(object):
     def __init__(self, draw_type=gl.GL_POINTS, **args):
         self.draw_type = draw_type
-        if args.has_key('is_visible'):
+        if 'is_visible' in args:
             self.is_visible = args['is_visible']
         else:
             self.is_visible = False
@@ -25,7 +25,7 @@ class SimpleShaderProgram(object):
             gl.glShaderSource(handle, shader_source)
             gl.glCompileShader(handle)
             if not gl.glGetShaderiv(handle, gl.GL_COMPILE_STATUS):
-                print gl.glGetShaderInfoLog(handle)
+                print(gl.glGetShaderInfoLog(handle))
 
         self.program = gl.glCreateProgram()
         vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
@@ -45,7 +45,23 @@ class SimpleShaderProgram(object):
         self.buffer = gl.glGenBuffers(1)
         self.VAO = gl.glGenVertexArrays(1)
 
+    def delete(self):
+        # gl.glDeleteVertexArrays(1, self.VAO)
+        # gl.glDeleteBuffers(1, self.buffer)
+        gl.glDeleteProgram(self.program)
+
+    def updateAttributes(self, filter=None):
+        if filter is None:
+            data = self.data
+        else:
+            data = self.data[filter]
+        self.dataLen = data.shape[0]
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
     def setAttributes(self, data):
+        self.data = data
         self.dataLen = data.shape[0]
         # Make this buffer the default one
         gl.glBindVertexArray(self.VAO)
@@ -130,8 +146,8 @@ class CrossHairProgram(SimpleShaderProgram):
     hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
     hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
 
-    def __init__(self):
-        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, is_visible=False)
+    def __init__(self, **args):
+        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, **args)
         self.initialise()
         self.setAttributes(self.hud_data)
 
@@ -180,7 +196,7 @@ class PointShaderProgram(SimpleShaderProgram):
         # import ipdb; ipdb.set_trace()
 
         super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
-        if kwargs.has_key('color'):
+        if 'color' in kwargs:
             self.color = kwargs['color']
         self.initialise()
 
@@ -193,7 +209,7 @@ class PointShaderProgram(SimpleShaderProgram):
             self.do_blending = True
 
         colormap = 'jet'
-        if kwargs.has_key('colormap'):
+        if 'colormap' in kwargs:
             colormap = kwargs['colormap']
         self.texture = self.create_colormap(scheme=colormap)
         
@@ -216,7 +232,7 @@ class PointShaderProgram(SimpleShaderProgram):
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         else:
-            from colormaps import cm
+            from .colormaps import cm
             image = np.array(cm[scheme], dtype=np.float32)
 
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
@@ -296,8 +312,8 @@ class PointShaderProgram(SimpleShaderProgram):
                 v_normal = u_view * u_model * vec4(a_normal, 0);
                 v_normal = normalize(v_normal);
 
-                vec4 lighting_direction = vec4(0,1,1,0);
-                v_lightpwr = clamp(abs(dot(v_normal, normalize(lighting_direction))), 0, 1);
+                vec4 lighting_direction = vec4(1,1,1,0);
+                v_lightpwr = clamp(abs(dot(v_normal, normalize(lighting_direction))), 0.3, 1);
             #else
                 v_lightpwr = 1.0;
             #endif
@@ -355,9 +371,9 @@ class PointShaderProgram(SimpleShaderProgram):
             //color =  vec4(color_scheme(v_color_intensity), alpha);
             //#else if defined(with_texture)
             #if defined(fixed_color)
-                color =  vec4({color[0]}, {color[1]}, {color[2]}, 1);
+                color =  v_lightpwr*vec4({color[0]}, {color[1]}, {color[2]}, 1);
             #else
-                color =  texture(u_color_ramp, v_color_intensity);
+                color =  v_lightpwr*texture(u_color_ramp, v_color_intensity);
             #endif
             gl_FragDepth = gl_FragCoord.z + 0.002*(1.0-pow(c, 1.0)) * gl_FragCoord.w;
             
@@ -381,9 +397,7 @@ class LineShaderProgram(SimpleShaderProgram):
         #     self.attributes += "attribute float a_intensity;\n"
 
         super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES, **args)
-        if not args.has_key('color'):
-            self.color = (1,0,0)
-        else:
+        if 'color' in args:
             self.color = args['color']
         self.initialise()
 

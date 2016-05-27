@@ -1,6 +1,6 @@
 from time import time
 import sys
-
+import math
 import numpy as np
 from povi import App
 from pointio import io_npy
@@ -17,7 +17,7 @@ class MAHelper(object):
         self.D=datadict
         self.D['coords'] = datadict['coords']-self.mean
         self.D['normals'] = datadict['normals']
-        if datadict.has_key('ma_segment'):
+        if 'ma_segment' in datadict:
             self.D['ma_segment'] = datadict['ma_segment']
         self.m, self.n = self.D['coords'].shape
         self.D['ma_coords_in'] = datadict['ma_coords_in']-self.mean
@@ -60,19 +60,36 @@ def mat(input, min_r, max_r):
     t0=time()
     datadict = io_npy.read_npy(input)
     ma = MAHelper(datadict)
-    print("{} points loaded from file in {} s".format(ma.m, time()-t0))
+    print(("{} points loaded from file in {} s".format(ma.m, time()-t0)))
 
     # import ipdb; ipdb.set_trace()
     c.add_data_source(
+        name = 'Surface points',
         opts=['splat_disk', 'with_normals'],
         points=ma.D['coords'], normals=ma.D['normals']
     )
 
+    if 'decimate_lfs' in ma.D:
+        f = ma.D['decimate_lfs']
+        c.add_data_source(
+            name = 'Surface points lfs',
+            opts=['splat_disk', 'with_normals', 'with_intensity'],
+            intensity=ma.D['lfs'],
+            points=ma.D['coords'], normals=ma.D['normals']
+        )
+        
+        c.add_data_source(
+            name = 'Surface points decimated',
+            opts=['splat_disk', 'with_normals'],
+            points=ma.D['coords'][f], normals=ma.D['normals'][f]
+        )
+
     f_r = np.logical_and(ma.D['ma_radii'] < max_r, ma.D['ma_radii'] > min_r)
 
-    if ma.D.has_key('ma_segment'):
+    if 'ma_segment' in ma.D:
         f = np.logical_and(f_r, ma.D['ma_segment']>0)
         c.add_data_source(
+            name = 'MAT points',
             opts=['splat_point', 'with_intensity'],
             points=ma.D['ma_coords'][f], 
             category=ma.D['ma_segment'][f].astype(np.float32),
@@ -81,31 +98,37 @@ def mat(input, min_r, max_r):
     
         f = np.logical_and(f_r, ma.D['ma_segment']==0)
         c.add_data_source(
+            name = 'MAT points unsegmented',
             opts = ['splat_point', 'blend'],
             points=ma.D['ma_coords'][f]
         )
     else:
         f_ri = np.logical_and(ma.D['ma_radii_in'] < max_r, ma.D['ma_radii_in'] > min_r)
         c.add_data_source(
+            name = 'MAT points interior',
             opts = ['splat_point', 'blend'],
             points=ma.D['ma_coords_in'][f_ri]
         )
         f_ro = np.logical_and(ma.D['ma_radii_out'] < max_r, ma.D['ma_radii_out'] > min_r)
         c.add_data_source(
+            name = 'MAT points exterior',
             opts = ['splat_point', 'blend'],
             points=ma.D['ma_coords_out'][f_ro]
         )
 
     
     c.add_data_source_line(
+        name = 'Bisectors',
         coords_start = ma.D['ma_coords'][f_r],
         coords_end = ma.D['ma_bisec'][f_r]+ma.D['ma_coords'][f_r]
     )
     c.add_data_source_line(
+        name = 'Primary spokes',
         coords_start = ma.D['ma_coords'][f_r],
         coords_end = np.concatenate([ma.D['coords'],ma.D['coords']])[f_r]
     )
     c.add_data_source_line(
+        name = 'Secondary spokes',
         coords_start = ma.D['ma_coords'][f_r],
         coords_end = np.concatenate([ma.D['coords'][ma.D['ma_qidx_in']],ma.D['coords'][ma.D['ma_qidx_out']]])[f_r]
     )

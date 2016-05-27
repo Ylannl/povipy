@@ -1,0 +1,4 @@
+include LICENSE
+include povi/tools.ui
+recursive-include povi *.py
+recursive-include util *.py
