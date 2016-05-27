@@ -6,13 +6,10 @@ Bare-bones in-core point cloud viewer made in python. Features:
 * load multiple layers at once
 * control clipping planes
 * colormaps
+* runs on windows and mac (linux should work too but not tested)
 
 ## Installing
-First install [GLFW](http://www.glfw.org) 3. With Mac/Homebrew this is easy:
-```
-brew install glfw3
-```
-for other platforms check the [GLFW download page](http://www.glfw.org/download.html).
+First install PyQT5.
 
 Then install povipy with pip.
 ```
@@ -20,12 +17,6 @@ pip install git+https://github.com/Ylannl/povipy.git --process-dependency-links
 ```
 
 ## Using
-For LAS files:
-```
-povilas.py mydata.las
-```
-LAZ is also possible if [laspy](https://github.com/grantbrown/laspy) is able to detect `laszip` on your system.
-
 For MAT datasets created with [masbcpp](https://github.com/tudelft3d/masbcpp):
 ```
 povimat.py mydata_npy
