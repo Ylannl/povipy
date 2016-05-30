@@ -26,11 +26,11 @@ from .shader import *
 
 class App(QApplication):
 
-    def __init__(self, args=[]):
+    def __init__(self, args=[], **kwargs):
         # self.app = QApplication([])
         super(App, self).__init__(args)
 
-        self.viewerWindow = ViewerWindow()
+        self.viewerWindow = ViewerWindow(**kwargs)
         self.dialog = None
         
         self.add_data_source = self.viewerWindow.add_data_source
@@ -102,7 +102,7 @@ alt + scroll         - move near clipping plane
 ctrl + alt + scroll  - move far and near clipping plane simultaniously
 """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, **kwargs):
         super(ViewerWindow, self).__init__(parent)
         self.setSurfaceType(QWindow.OpenGLSurface)
 
@@ -142,7 +142,12 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.fov = 5.
         self.camera_position = -12.
         self.near_clip = .1
+        if kwargs.has_key('near_clip'):
+            self.near_clip = kwargs['near_clip']
         self.far_clip = 100.
+        if kwargs.has_key('far_clip'):
+            self.far_clip = kwargs['far_clip']
+        
 
         self.projection_mode = 'perspective' # 'orthographic'
 
@@ -443,6 +448,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.near_clip -= ticks
             self.far_clip -= ticks
             self.update_projection_matrix()
+            print self.near_clip, self.far_clip
         elif modifiers == Qt.AltModifier:
             # if modifiers == Qt.ShiftModifier:
             ticks /= 30
@@ -450,6 +456,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             if new <= self.far_clip:
                 self.near_clip = new
                 self.update_projection_matrix()
+            print self.near_clip
         elif modifiers == Qt.ControlModifier:
             # if modifiers == Qt.ShiftModifier:
             ticks /= 30
@@ -457,6 +464,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             if new >= self.near_clip:
                 self.far_clip = new
                 self.update_projection_matrix()
+            print self.far_clip
         elif modifiers == Qt.ShiftModifier:
             if self.projection_mode == 'perspective':
                 old_fov = self.fov

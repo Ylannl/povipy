@@ -54,8 +54,10 @@ class MAHelper(object):
 @click.argument('input', type=click.Path(exists=True))
 @click.option('-R', '--max_r', default=190., type=float, help='Only show MAT with a radius lower than specified with this value.')
 @click.option('-r', '--min_r', default=0., type=float, help='Only show MAT with a radius higher than specified with this value.')
-def mat(input, min_r, max_r):
-    c = App()
+@click.option('-n', '--near_clip', default=0.1, type=float, help='Near clip value.')
+@click.option('-f', '--far_clip', default=100.0, type=float, help='Far clip value.')
+def mat(input, min_r, max_r, near_clip, far_clip):
+    c = App(near_clip=near_clip, far_clip=far_clip)
     
     t0=time()
     datadict = io_npy.read_npy(input)
