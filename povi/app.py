@@ -86,7 +86,8 @@ class ViewerWindow(QWindow):
     instructions = """
 --Key controls
 0-9     - toggle data layers
-r       - reset viewpoint to defaults
+r       - reset view parameters
+c       - clip view
 t       - view from top
 l       - light/dark background
 =       - increase point size
@@ -404,6 +405,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             for program in list(self.data_programs.values()):
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.do_blending = not program.do_blending
+        elif key == Qt.Key_C:
+            self.near_clip = -self.camera_position - 0.1
+            self.far_clip = -self.camera_position + 0.1
+            self.update_projection_matrix()
         elif key == Qt.Key_T:
             self.rotation = q.quaternion()
             self.update_view_matrix()
@@ -448,7 +453,6 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.near_clip -= ticks
             self.far_clip -= ticks
             self.update_projection_matrix()
-            print self.near_clip, self.far_clip
         elif modifiers == Qt.AltModifier:
             # if modifiers == Qt.ShiftModifier:
             ticks /= 30
@@ -456,7 +460,6 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             if new <= self.far_clip:
                 self.near_clip = new
                 self.update_projection_matrix()
-            print self.near_clip
         elif modifiers == Qt.ControlModifier:
             # if modifiers == Qt.ShiftModifier:
             ticks /= 30
@@ -464,14 +467,13 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             if new >= self.near_clip:
                 self.far_clip = new
                 self.update_projection_matrix()
-            print self.far_clip
         elif modifiers == Qt.ShiftModifier:
             if self.projection_mode == 'perspective':
                 old_fov = self.fov
                 # do `dolly zooming` so that world appears at same size after canging fov
                 self.fov = max(5.,self.fov + ticks)
                 self.fov = min(120.,self.fov)
-                self.camera_position = (self.camera_position * math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
+                self.camera_position = self.camera_position * (math.tan(math.radians(old_fov)/2.)) / (math.tan(math.radians(self.fov)/2.))
                 self.update_projection_matrix()
                 self.update_view_matrix()
         elif modifiers == Qt.MetaModifier:
