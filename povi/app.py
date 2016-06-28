@@ -35,6 +35,7 @@ class App(QApplication):
         
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
+        self.add_data_source_triangle = self.viewerWindow.add_data_source_triangle
         self.data_programs = self.viewerWindow.data_programs
         
         self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
@@ -321,6 +322,32 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         data['a_position'] = vertices
 
         program = LineShaderProgram(**args)
+
+        program.name = name
+        program.setUniform('u_model', self.model)
+        program.setUniform('u_view', self.view)
+        program.setUniform('u_projection', self.projection)
+        program.setAttributes(data)
+        self.data_programs[name] = program
+
+        return program
+
+    def add_data_source_triangle(self, name, coords, normals, **args):
+        min_xy = np.nanmin( coords, axis=0 )
+        max_xy = np.nanmax( coords, axis=0 )
+        if len(list(self.data_programs.values())) == 0:
+            self.data_width = max_xy[0] - min_xy[0]
+            self.data_height = max_xy[1] - min_xy[1]
+            self.data_depth = max_xy[2] - min_xy[2]
+
+            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
+        m,n = coords.shape
+
+        data = np.empty( m, [('a_position', np.float32, 3), ('a_normal', np.float32, 3)] )
+        data['a_position'] = coords
+        data['a_normal'] = normals
+
+        program = TriangleShaderProgram(**args)
 
         program.name = name
         program.setUniform('u_model', self.model)

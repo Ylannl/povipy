@@ -401,6 +401,66 @@ class LineShaderProgram(SimpleShaderProgram):
             self.color = args['color']
         self.initialise()
 
+class TriangleShaderProgram(SimpleShaderProgram):
+
+    def __init__(self, **args):
+        self.do_blending = False
+        # self.zmin, self.zmax = zrange
+
+        # self.defines = ""
+        # for option in options:
+        #     if option in all_options:
+        #         self.defines += "#define {}\n".format(option)
+
+        # if 'with_intensity' in options:
+        #     self.attributes += "attribute float a_intensity;\n"
+
+        super(TriangleShaderProgram, self).__init__(draw_type = gl.GL_TRIANGLES, **args)
+        if 'color' in args:
+            self.color = args['color']
+        self.initialise()
+
+    def vertex_str(self):
+        return """
+#version 330
+
+// Uniforms
+// ------------------------------------
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_projection;
+
+// Attributes
+// ------------------------------------
+in vec3  a_position;
+in vec3  a_normal;
+
+out vec4 v_color;
+
+void main (void) {{
+vec4 posEye = u_view * u_model * vec4(a_position, 1.0);    
+gl_Position = u_projection * posEye;
+
+vec4 n = u_view * u_model * vec4(a_normal, 0);
+vec4 lighting_direction = vec4(1,1,1,0);
+v_color = clamp(abs(dot(normalize(n), normalize(lighting_direction))), 0.3, 1) * vec4({0}, {1}, {2}, 1);
+}}
+""".format(self.color[0], self.color[1], self.color[2])
+
+    def fragment_str(self):
+        return """
+#version 330
+
+in vec4 v_color;
+out vec4 color;
+
+void main()
+{{
+color =  v_color;    
+}}
+"""
+
+
 ### triangle shader:
 
 # class BallShaderProgram(gloo.Program):
@@ -511,5 +571,5 @@ class LineShaderProgram(SimpleShaderProgram):
 # }}
 # """
 
-### point shader:
+# ## point shader:
 
