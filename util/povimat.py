@@ -71,6 +71,13 @@ def mat(input, min_r, max_r, near_clip, far_clip):
         points=ma.D['coords'], normals=ma.D['normals']
     )
 
+    c.add_data_source_line(
+      name = 'point normals',
+      coords_start = ma.D['coords'] + ma.D['normals'],
+      coords_end = ma.D['coords'],
+      color = (1,1,0)
+    )
+
     if 'decimate_lfs' in ma.D:
         f = ma.D['decimate_lfs']
         c.add_data_source(

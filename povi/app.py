@@ -305,8 +305,8 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
 
     def add_data_source_line(self, name, coords_start, coords_end, **args):
         #interleave coordinates
-        min_xy = np.nanmin( coords_start, axis=0 )
-        max_xy = np.nanmax( coords_start, axis=0 )
+        min_xy = np.nanmin( coords_end, axis=0 )
+        max_xy = np.nanmax( coords_end, axis=0 )
         if len(list(self.data_programs.values())) == 0:
             self.data_width = max_xy[0] - min_xy[0]
             self.data_height = max_xy[1] - min_xy[1]
