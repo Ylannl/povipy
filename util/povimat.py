@@ -111,41 +111,41 @@ def mat(input, min_r, max_r, near_clip, far_clip):
             opts = ['splat_point', 'blend'],
             points=ma.D['ma_coords'][f]
         )
-        
-        # visualise adj/flip relations
-        ma.g = ma.D['ma_segment_graph']
-        flip_rel_start = np.zeros((len(ma.D['seg_link_flip']),3), dtype=np.float32)
-        flip_rel_end = np.zeros((len(ma.D['seg_link_flip']),3), dtype=np.float32)
-        i=0
-        for s,e in ma.D['seg_link_flip'][:,:2]:
-            flip_rel_start[i] = ma.g.vs[s]['ma_coords_mean']
-            flip_rel_end[i] = ma.g.vs[e]['ma_coords_mean']
-            i+=1
+        if 'ma_segment_graph' in ma.D:        
+            # visualise adj/flip relations
+            ma.g = ma.D['ma_segment_graph']
+            flip_rel_start = np.zeros((len(ma.D['seg_link_flip']),3), dtype=np.float32)
+            flip_rel_end = np.zeros((len(ma.D['seg_link_flip']),3), dtype=np.float32)
+            i=0
+            for s,e in ma.D['seg_link_flip'][:,:2]:
+                flip_rel_start[i] = ma.g.vs[s]['ma_coords_mean']
+                flip_rel_end[i] = ma.g.vs[e]['ma_coords_mean']
+                i+=1
 
-        adj_rel_start = np.zeros((len(ma.D['seg_link_adj']),3), dtype=np.float32)
-        adj_rel_end = np.zeros((len(ma.D['seg_link_adj']),3), dtype=np.float32)
-        i=0
-        # f = ma.D['seg_link_adj'][:,2] > min_link_adj
-        for s,e in ma.D['seg_link_adj'][:,:2]:
-            adj_rel_start[i] = ma.g.vs[s]['ma_coords_mean']
-            adj_rel_end[i] = ma.g.vs[e]['ma_coords_mean']
-            i+=1
+            adj_rel_start = np.zeros((len(ma.D['seg_link_adj']),3), dtype=np.float32)
+            adj_rel_end = np.zeros((len(ma.D['seg_link_adj']),3), dtype=np.float32)
+            i=0
+            # f = ma.D['seg_link_adj'][:,2] > min_link_adj
+            for s,e in ma.D['seg_link_adj'][:,:2]:
+                adj_rel_start[i] = ma.g.vs[s]['ma_coords_mean']
+                adj_rel_end[i] = ma.g.vs[e]['ma_coords_mean']
+                i+=1
 
-        if len(flip_rel_start)>0:
-            c.add_data_source_line(
-                name = 'Flip relations',
-                coords_start = flip_rel_start,
-                coords_end = flip_rel_end
-            )
+            if len(flip_rel_start)>0:
+                c.add_data_source_line(
+                    name = 'Flip relations',
+                    coords_start = flip_rel_start,
+                    coords_end = flip_rel_end
+                )
 
-        if len(adj_rel_start)>0:
-            # f = seg_cnts!=1
-            c.add_data_source_line(
-                name = 'Adjacency relations',
-                coords_start = adj_rel_start,
-                coords_end = adj_rel_end,
-                color = (0,1,0)
-            )
+            if len(adj_rel_start)>0:
+                # f = seg_cnts!=1
+                c.add_data_source_line(
+                    name = 'Adjacency relations',
+                    coords_start = adj_rel_start,
+                    coords_end = adj_rel_end,
+                    color = (0,1,0)
+                )
 
     else:
         f_ri = np.logical_and(ma.D['ma_radii_in'] < max_r, ma.D['ma_radii_in'] > min_r)
