@@ -144,10 +144,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.fov = 5.
         self.camera_position = -12.
         self.near_clip = .1
-        if kwargs.has_key('near_clip'):
+        if 'near_clip' in kwargs:
             self.near_clip = kwargs['near_clip']
         self.far_clip = 100.
-        if kwargs.has_key('far_clip'):
+        if 'far_clip' in kwargs:
             self.far_clip = kwargs['far_clip']
         
 
