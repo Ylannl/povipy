@@ -11,7 +11,7 @@ import ctypes
 import numpy as np
 
 class SimpleShaderProgram(object):
-    def __init__(self, draw_type=gl.GL_POINTS, **args):
+    def __init__(self, draw_type='points', **args):
         self.draw_type = draw_type
         if 'is_visible' in args:
             self.is_visible = args['is_visible']
@@ -19,6 +19,8 @@ class SimpleShaderProgram(object):
             self.is_visible = False
         self.uniforms = {}
         self.color = (1,0,0)
+
+        self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES}
 
     def initialise(self):
         def compileShader(handle, shader_source):
@@ -104,7 +106,7 @@ class SimpleShaderProgram(object):
             gl.glUseProgram(self.program)
             gl.glBindVertexArray(self.VAO)
             # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-            gl.glDrawArrays(self.draw_type, 0, self.dataLen)
+            gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             gl.glBindVertexArray(0)
             gl.glUseProgram(0)
 
@@ -147,7 +149,7 @@ class CrossHairProgram(SimpleShaderProgram):
     hud_data['a_position'] = np.array([[-1, 0], [1,0], [0,-1], [0,1]], dtype=np.float32)
 
     def __init__(self, **args):
-        super(CrossHairProgram, self).__init__(draw_type=gl.GL_LINES, **args)
+        super(CrossHairProgram, self).__init__(draw_type='lines', **args)
         self.initialise()
         self.setAttributes(self.hud_data)
 
@@ -195,7 +197,7 @@ class PointShaderProgram(SimpleShaderProgram):
             self.attributes += "in float a_intensity;\n"
         # import ipdb; ipdb.set_trace()
 
-        super(PointShaderProgram, self).__init__(draw_type=gl.GL_POINTS, is_visible=False)
+        super(PointShaderProgram, self).__init__(draw_type='points', is_visible=False)
         if 'color' in kwargs:
             self.color = kwargs['color']
         self.initialise()
@@ -248,7 +250,7 @@ class PointShaderProgram(SimpleShaderProgram):
             gl.glActiveTexture(gl.GL_TEXTURE0)
             gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);
             gl.glBindVertexArray(self.VAO)
-            gl.glDrawArrays(self.draw_type, 0, self.dataLen)
+            gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             gl.glBindVertexArray(0)
             gl.glUseProgram(0)
 
@@ -396,7 +398,7 @@ class LineShaderProgram(SimpleShaderProgram):
         # if 'with_intensity' in options:
         #     self.attributes += "attribute float a_intensity;\n"
 
-        super(LineShaderProgram, self).__init__(draw_type = gl.GL_LINES, **args)
+        super(LineShaderProgram, self).__init__(draw_type = 'lines', **args)
         if 'color' in args:
             self.color = args['color']
         self.initialise()
@@ -415,7 +417,7 @@ class TriangleShaderProgram(SimpleShaderProgram):
         # if 'with_intensity' in options:
         #     self.attributes += "attribute float a_intensity;\n"
 
-        super(TriangleShaderProgram, self).__init__(draw_type = gl.GL_TRIANGLES, **args)
+        super(TriangleShaderProgram, self).__init__(draw_type = 'triangles', **args)
         if 'color' in args:
             self.color = args['color']
         self.initialise()

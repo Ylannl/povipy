@@ -36,6 +36,8 @@ class App(QApplication):
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.add_data_source_triangle = self.viewerWindow.add_data_source_triangle
+        self.layer_manager = self.viewerWindow.layer_manager
+        self.add_layer = self.viewerWindow.add_layer
         
         self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
 
@@ -131,9 +133,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.model = np.eye(4, dtype=np.float32)
         self.projection = np.eye(4, dtype=np.float32)
 
-        # self.data_programs = OrderedDict()
         self.layer_manager = LayerManager()
-        self.layer_manager.add_layer(Layer(name='Default'))
 
         self.visibility_toggle_listeners = []
         self.multiview = True
@@ -161,14 +161,24 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
 
         print((self.instructions))
 
+    def add_layer(self, layer):
+        self.layer_manager.add_layer(layer)
+        return layer
+
     # keeping this compatibility with older scripts 
     def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
+        if len(self.layer_manager.layers) == 0:
+            self.layer_manager.add_layer(Layer(name='Default'))
         self.layer_manager.layers[0].add_data_source(name, opts, points, normals=normals, radii=radii, intensity=intensity, category=category, zrange=zrange, **kwargs)
 
     def add_data_source_line(self, name, coords_start, coords_end, **args):
+        if len(self.layer_manager.layers) == 0:
+            self.layer_manager.add_layer(Layer(name='Default'))
         self.layer_manager.layers[0].add_data_source_line(name, coords_start, coords_end, **args)
 
     def add_data_source_triangle(self, name, coords, normals, **args):
+        if len(self.layer_manager.layers) == 0:
+            self.layer_manager.add_layer(Layer(name='Default'))
         self.layer_manager.layers[0].add_data_source_triangle(name, coords, normals, **args)
 
     def run(self):
@@ -242,7 +252,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
                     gl.glBlendFunc(gl.GL_ONE, gl.GL_SRC_ALPHA)
             else:
                 gl.glDisable(gl.GL_BLEND)
-            program.draw()
+        self.layer_manager.draw()
         
         if self.hud_program.is_visible:
             self.hud_program.draw()
@@ -274,7 +284,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         translate(self.view, 0,0, self.camera_position)
         for program in self.layer_manager.programs():
             program.setUniform('u_view', self.view)
-            if program.draw_type == gl.GL_POINTS:
+            if program.draw_type == 'points':
                 program.setUniform('u_model_scale', self.scale)
 
     def update_projection_matrix(self):
@@ -317,17 +327,17 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
             for program in self.layer_manager.programs():
-                if program.draw_type == gl.GL_POINTS:
+                if program.draw_type == 'points':
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == Qt.Key_Equal:
             for program in self.layer_manager.programs():
-                if program.draw_type == gl.GL_POINTS:
+                if program.draw_type == 'points':
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == Qt.Key_B:
             for program in self.layer_manager.programs():
-                if program.is_visible and program.draw_type == gl.GL_POINTS:
+                if program.is_visible and program.draw_type == 'points':
                     program.do_blending = not program.do_blending
         elif key == Qt.Key_C:
             self.near_clip = -self.camera_position - 0.1
