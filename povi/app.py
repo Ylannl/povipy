@@ -20,7 +20,7 @@ from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
 from PyQt5.QtWidgets import QApplication, QWidget, QToolBox
 
 from .transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
-
+from .layer import *
 from .linalg import quaternion as q
 from .shader import *
 
@@ -36,7 +36,6 @@ class App(QApplication):
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.add_data_source_triangle = self.viewerWindow.add_data_source_triangle
-        self.data_programs = self.viewerWindow.data_programs
         
         self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
 
@@ -54,7 +53,7 @@ class App(QApplication):
         
     def set_layer_selection(self):
         selected_names = [item.data(0) for item in self.dialog.ui.listWidget_layers.selectedItems()]
-        for name, program in self.viewerWindow.data_programs.items():
+        for name, program in self.viewerWindow.layer_manager.programs(with_names=True):
             if name in selected_names:
                 program.is_visible = True
             elif not name.startswith('graph'):
@@ -70,7 +69,7 @@ class ToolsDialog(QWidget):
         # populate datalayers list
         # print self.app.viewerWindow.data_programs.keys()
         l=[]
-        for program_name in list(self.app.viewerWindow.data_programs.keys()):
+        for program_name, p in list(self.app.viewerWindow.layer_manager.programs(with_names=True)):
             if not program_name.startswith('graph'):
                 l.append(program_name)
         self.ui.listWidget_layers.addItems(l)
@@ -132,7 +131,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.model = np.eye(4, dtype=np.float32)
         self.projection = np.eye(4, dtype=np.float32)
 
-        self.data_programs = OrderedDict()
+        # self.data_programs = OrderedDict()
+        self.layer_manager = LayerManager()
+        self.layer_manager.add_layer(Layer(name='Default'))
+
         self.visibility_toggle_listeners = []
         self.multiview = True
 
@@ -159,6 +161,16 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
 
         print((self.instructions))
 
+    # keeping this compatibility with older scripts 
+    def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
+        self.layer_manager.layers[0].add_data_source(name, opts, points, normals=normals, radii=radii, intensity=intensity, category=category, zrange=zrange, **kwargs)
+
+    def add_data_source_line(self, name, coords_start, coords_end, **args):
+        self.layer_manager.layers[0].add_data_source_line(name, coords_start, coords_end, **args)
+
+    def add_data_source_triangle(self, name, coords, normals, **args):
+        self.layer_manager.layers[0].add_data_source_triangle(name, coords, normals, **args)
+
     def run(self):
         self.initialize()
         self.show()
@@ -174,11 +186,16 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.translation = np.zeros(3)
         self.model = np.eye(4, dtype=np.float32)
         translate(self.model, -center[0], -center[1], -center[2])
-        for program in list(self.data_programs.values()):
+        for program in self.layer_manager.programs():
             program.setUniform('u_model', self.model)
         self.update_view_matrix()
 
     def initialize(self):
+        self.data_center = self.layer_manager.layers[0].get_center()
+        data_range = self.layer_manager.layers[0].data_range
+        self.data_width = data_range[0]
+        self.data_height = data_range[2]
+
         self.context.makeCurrent(self)
 
         gl.glDepthMask(gl.GL_TRUE)
@@ -190,8 +207,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         view_width, view_height = [x/self.radius for x in self.size]
 
         translate(self.model, -self.data_center[0], -self.data_center[1], -self.data_center[2])
-        for program in list(self.data_programs.values()):
+        for program in self.layer_manager.programs():
             program.setUniform('u_model', self.model)
+            program.setUniform('u_view', self.view)
+            program.setUniform('u_projection', self.projection)
 
         self.modelscale = .6* 2*min(2.*view_width/self.data_width, 2.*view_height/self.data_height)
         self.scale = self.modelscale
@@ -213,7 +232,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         gl.glClear(bits)
         gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
         
-        for program in list(self.data_programs.values()):
+        for program in self.layer_manager.programs():
             if program.do_blending:
                 if self.bg_white:
                     gl.glEnable(gl.GL_BLEND)
@@ -246,128 +265,6 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.on_resize(size.width(), size.height())
         self.render()
 
-    def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
-        # points = points[~np.isnan(points).any(axis=1)]
-        m,n = points.shape
-
-        attribute_definitions = []
-        data_list = []
-        attribute_definitions.append(('a_position', np.float32, 3))
-        data_list = [points]
-        if normals is not None:
-            attribute_definitions.append(('a_normal', np.float32, 3))
-            data_list.append(normals)
-        if radii is not None:
-            attribute_definitions.append(('a_splat_radius', np.float32, 1))
-            data_list.append(radii)
-        if intensity is not None:
-            attribute_definitions.append(('a_intensity', np.float32, 1))
-            intensity *= 1./np.nanmax(intensity)
-            # import pdb; pdb.set_trace()
-            data_list.append(intensity)
-        if category is not None:
-            attribute_definitions.append(('a_intensity', np.float32, 1))
-            intensity = (category%256)/256.
-            # import pdb; pdb.set_trace()
-            data_list.append(intensity)
-
-        data = np.zeros( m, attribute_definitions )
-        for definition, di in zip(attribute_definitions, data_list):
-            data[definition[0]]=di
-
-        min_xy = np.nanmin( data['a_position'], axis=0 )
-        max_xy = np.nanmax( data['a_position'], axis=0 )
-        # print min_xy
-        # print max_xy
-        if len(list(self.data_programs.values())) == 0:
-            self.data_width = max_xy[0] - min_xy[0]
-            self.data_height = max_xy[1] - min_xy[1]
-            self.data_depth = max_xy[2] - min_xy[2]
-
-            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, 0#min_xy[2] + self.data_depth/2
-            # self.data_center = 0,0,0
-
-        if zrange is not None:
-             zmin, zmax = zrange
-        else:
-            zmin, zmax = min_xy[2], max_xy[2]
-        # for mode in modes:
-        program = PointShaderProgram(options=opts, zrange=(zmin, zmax), **kwargs)
-        program.name = name
-        program.setUniform('u_model', self.model)
-        program.setUniform('u_view', self.view)
-        program.setUniform('u_projection', self.projection)
-        program.setAttributes(data)
-
-        self.data_programs[name] = program
-
-        return program
-
-    def add_data_source_line(self, name, coords_start, coords_end, **args):
-        #interleave coordinates
-        min_xy = np.nanmin( coords_end, axis=0 )
-        max_xy = np.nanmax( coords_end, axis=0 )
-        if len(list(self.data_programs.values())) == 0:
-            self.data_width = max_xy[0] - min_xy[0]
-            self.data_height = max_xy[1] - min_xy[1]
-            self.data_depth = max_xy[2] - min_xy[2]
-
-            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
-        m,n = coords_start.shape
-        vertices = np.empty((m*2,n), dtype=coords_start.dtype)
-        vertices[0::2] = coords_start
-        vertices[1::2] = coords_end
-      
-        data = np.empty( 2*m, [('a_position', np.float32, 3)] )
-        data['a_position'] = vertices
-
-        program = LineShaderProgram(**args)
-
-        program.name = name
-        program.setUniform('u_model', self.model)
-        program.setUniform('u_view', self.view)
-        program.setUniform('u_projection', self.projection)
-        program.setAttributes(data)
-        self.data_programs[name] = program
-
-        return program
-
-    def add_data_source_triangle(self, name, coords, normals, **args):
-        min_xy = np.nanmin( coords, axis=0 )
-        max_xy = np.nanmax( coords, axis=0 )
-        if len(list(self.data_programs.values())) == 0:
-            self.data_width = max_xy[0] - min_xy[0]
-            self.data_height = max_xy[1] - min_xy[1]
-            self.data_depth = max_xy[2] - min_xy[2]
-
-            self.data_center = min_xy[0] + self.data_width/2, min_xy[1] + self.data_height/2, min_xy[2] + self.data_depth/2
-        m,n = coords.shape
-
-        data = np.empty( m, [('a_position', np.float32, 3), ('a_normal', np.float32, 3)] )
-        data['a_position'] = coords
-        data['a_normal'] = normals
-
-        program = TriangleShaderProgram(**args)
-
-        program.name = name
-        program.setUniform('u_model', self.model)
-        program.setUniform('u_view', self.view)
-        program.setUniform('u_projection', self.projection)
-        program.setAttributes(data)
-        self.data_programs[name] = program
-
-        return program
-
-    def add_data_source_ball(self, name, points, radii, color=(0,1,0)):
-        program = BallShaderProgram(points, radii, color)
-        program.name = name
-        program['u_model'] = self.model
-        program['u_view'] = self.view
-        program['u_projection'] = self.projection
-        self.data_programs[name] = program
-
-        return program
-
     def update_view_matrix(self):
         self.view = np.eye(4, dtype=np.float32)
         translate(self.view, self.translation[0], self.translation[1], self.translation[2] )
@@ -375,7 +272,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.view = self.view.dot( np.array(q.matrix(self.rotation), dtype=np.float32) )
         # translate(self.view, -self.translation[0], -self.translation[1], -self.translation[2] )
         translate(self.view, 0,0, self.camera_position)
-        for program in list(self.data_programs.values()):
+        for program in self.layer_manager.programs():
             program.setUniform('u_view', self.view)
             if program.draw_type == gl.GL_POINTS:
                 program.setUniform('u_model_scale', self.scale)
@@ -388,7 +285,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         elif self.projection_mode == 'perspective':
             self.projection = perspective(self.fov, view_width / float(view_height), self.near_clip, self.far_clip)
 
-        for program in list(self.data_programs.values()):
+        for program in self.layer_manager.programs():
             program.setUniform('u_projection', self.projection)
 
     def screen2view(self, x,y):
@@ -419,17 +316,17 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.center_view()
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
-            for program in list(self.data_programs.values()):
+            for program in self.layer_manager.programs():
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == Qt.Key_Equal:
-            for program in list(self.data_programs.values()):
+            for program in self.layer_manager.programs():
                 if program.draw_type == gl.GL_POINTS:
                     if (program.is_visible and self.multiview) or not self.multiview:
                         program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == Qt.Key_B:
-            for program in list(self.data_programs.values()):
+            for program in self.layer_manager.programs():
                 if program.is_visible and program.draw_type == gl.GL_POINTS:
                     program.do_blending = not program.do_blending
         elif key == Qt.Key_C:
@@ -448,16 +345,16 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         elif key == Qt.Key_L:
             self.bg_white = not self.bg_white
             self.set_bg()
-        elif Qt.Key_0 <= key <= Qt.Key_9:
-            i = int(chr(key))-1
-            if i < len(list(self.data_programs.keys())):
-                if self.multiview:
-                    self.set_layer_visibility(list(self.data_programs.keys())[i], not list(self.data_programs.values())[i].is_visible)
-                else:
-                    for pi, prog in enumerate(self.data_programs.values()):
-                        prog.is_visible = False
-                        if pi == i:
-                            prog.is_visible = True
+        # elif Qt.Key_0 <= key <= Qt.Key_9:
+        #     i = int(chr(key))-1
+        #     if i < len(list(self.data_programs.keys())):
+        #         if self.multiview:
+        #             self.set_layer_visibility(list(self.data_programs.keys())[i], not list(self.data_programs.values())[i].is_visible)
+        #         else:
+        #             for pi, prog in enumerate(self.data_programs.values()):
+        #                 prog.is_visible = False
+        #                 if pi == i:
+        #                     prog.is_visible = True
 
         self.update()
 
