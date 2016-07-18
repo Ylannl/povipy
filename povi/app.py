@@ -201,8 +201,8 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.update_view_matrix()
 
     def initialize(self):
-        self.data_center = self.layer_manager.layers[0].get_center()
-        data_range = self.layer_manager.layers[0].data_range
+        self.data_center = self.layer_manager.layers[-1].get_center()
+        data_range = self.layer_manager.layers[-1].data_range
         self.data_width = data_range[0]
         self.data_height = data_range[2]
 
