@@ -20,7 +20,7 @@ class SimpleShaderProgram(object):
         self.uniforms = {}
         self.color = (1,0,0)
 
-        self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES}
+        self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES, 'line_strip':gl.GL_LINE_STRIP, 'line_loop':gl.GL_LINE_LOOP}
 
     def initialise(self):
         def compileShader(handle, shader_source):
@@ -405,7 +405,7 @@ class LineShaderProgram(SimpleShaderProgram):
 
 class TriangleShaderProgram(SimpleShaderProgram):
 
-    def __init__(self, **args):
+    def __init__(self, draw_type='triangles', **args):
         self.do_blending = False
         # self.zmin, self.zmax = zrange
 
@@ -416,8 +416,7 @@ class TriangleShaderProgram(SimpleShaderProgram):
 
         # if 'with_intensity' in options:
         #     self.attributes += "attribute float a_intensity;\n"
-
-        super(TriangleShaderProgram, self).__init__(draw_type = 'triangles', **args)
+        super(TriangleShaderProgram, self).__init__(draw_type = draw_type, **args)
         if 'color' in args:
             self.color = args['color']
         self.initialise()
