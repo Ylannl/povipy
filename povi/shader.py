@@ -11,7 +11,7 @@ import ctypes
 import numpy as np
 
 class SimpleShaderProgram(object):
-    def __init__(self, draw_type='points', **args):
+    def __init__(self, options=[], draw_type='points', **args):
         self.draw_type = draw_type
         if 'is_visible' in args:
             self.is_visible = args['is_visible']
@@ -19,6 +19,10 @@ class SimpleShaderProgram(object):
             self.is_visible = False
         self.uniforms = {}
         self.color = (1,0,0)
+        self.defines = ''
+
+        if 'alternate_vcolor' in options:
+            self.defines += '#define alternate_vcolor\n'
 
         self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES, 'line_strip':gl.GL_LINE_STRIP, 'line_loop':gl.GL_LINE_LOOP}
 
@@ -117,6 +121,8 @@ class SimpleShaderProgram(object):
         return """
         #version 330
 
+        {defines}
+
         // Uniforms
         // ------------------------------------
         uniform mat4 u_model;
@@ -127,22 +133,33 @@ class SimpleShaderProgram(object):
         // ------------------------------------
         in vec3 a_position;
 
+        out vec4 vcolor;
+
         void main (void) {{
+
+            vcolor = vec4({color[0]}, {color[1]}, {color[2]}, 1);
+            #if defined(alternate_vcolor)
+            if (gl_VertexID%2==0) {{
+                vcolor = vec4(1,1,1, 1);
+            }}
+            #endif
+            
             gl_Position = u_projection * u_view * u_model * vec4(a_position, 1.0);    
         }}
-        """
+        """.format(color=self.color, defines=self.defines)
 
     def fragment_str(self):
         return """
         #version 330
 
+        in vec4 vcolor;
         out vec4 color;
 
         void main()
         {{
-            color =  vec4({0}, {1}, {2}, 1);
+            color =  vcolor;
         }}
-        """.format(self.color[0], self.color[1], self.color[2])
+        """
 
 class CrossHairProgram(SimpleShaderProgram):
     hud_data = np.zeros( 4, [('a_position', np.float32, 2)] )
@@ -180,10 +197,11 @@ class PointShaderProgram(SimpleShaderProgram):
     _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
     
     def __init__(self, options=['fixed_point'], **kwargs):
+        super(PointShaderProgram, self).__init__(options, draw_type='points', is_visible=False)
+
         self.zmin, self.zmax = kwargs['zrange']
 
         options += ['with_texture']
-        self.defines = ""
         for option in options:
             if option in self._all_modes:
                 self.defines += "#define {}\n".format(option)
@@ -197,7 +215,7 @@ class PointShaderProgram(SimpleShaderProgram):
             self.attributes += "in float a_intensity;\n"
         # import ipdb; ipdb.set_trace()
 
-        super(PointShaderProgram, self).__init__(draw_type='points', is_visible=False)
+       
         if 'color' in kwargs:
             self.color = kwargs['color']
         self.initialise()
