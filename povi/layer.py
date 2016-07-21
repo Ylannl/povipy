@@ -38,7 +38,7 @@ class Layer(object):
 
     def __init__(self, name=None):
         self.name = name
-        self.is_visible = True
+        self.is_visible = False
         self.programs = OrderedDict()
         self.bb_min = None
         self.bb_max = None

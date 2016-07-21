@@ -53,12 +53,12 @@ class App(QApplication):
             item.setSelected(is_visible)
         
     def set_layer_selection(self):
-        selected_names = [item.data(0) for item in self.dialog.ui.listWidget_layers.selectedItems()]
-        for name, program in self.viewerWindow.layer_manager.programs(with_names=True):
-            if name in selected_names:
-                program.is_visible = True
-            elif not name.startswith('graph'):
-                program.is_visible = False
+        selected_names = [item.text(0) for item in self.dialog.ui.treeWidget_layers.selectedItems()]
+        for layer in self.layers:
+            layer.is_visible = layer.name in selected_names
+            if layer.name=="Clusters": continue
+            for program in layer:
+                program.is_visible = program.name in selected_names
         self.viewerWindow.render()
 
 class ToolsDialog(QWidget):
@@ -71,8 +71,7 @@ class ToolsDialog(QWidget):
         # print self.app.viewerWindow.data_programs.keys()
         l=[]
         for program_name, p in list(self.app.viewerWindow.layer_manager.programs(with_names=True)):
-            if not program_name.startswith('graph'):
-                l.append(program_name)
+            l.append(program_name)
         self.ui.listWidget_layers.addItems(l)
 
         # self.ui.doubleSpinBox_filterRadius.valueChanged.connect(self.app.update_radius)
