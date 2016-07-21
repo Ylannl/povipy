@@ -6,17 +6,28 @@ from .shader import *
 class LayerManager(object):
 
     def __init__(self):
-        self.layers = []
+        self.layers = OrderedDict()
+        self.first = None
+        self.last = None
 
     def add_layer(self, layer):
-        self.layers.append(layer)
+        self.layers[layer.name] = layer
+        if self.first is None: self.first = layer
+        self.last = layer
 
     def draw(self):
-        for layer in self.layers:
+        for layer in self:
             layer.draw()
 
+    def __iter__(self):
+        for layer in self.layers.values():
+            yield layer
+
+    def __getitem__(self, key):
+        return self.layers[key]
+
     def programs(self, with_names=False):
-        for layer in self.layers:
+        for layer in self:
             for name, program in layer.programs.items():
                 if with_names:
                     yield name, program
@@ -40,6 +51,21 @@ class Layer(object):
 
     def toggle(self):
         self.is_visible = not self.is_visible
+
+    def clear(self):
+        for program in self:
+            program.delete()
+        self.is_visible = True
+        self.programs = OrderedDict()
+        self.bb_min = None
+        self.bb_max = None
+
+    def __getitem__(self, key):
+        return self.programs[key]
+
+    def __iter__(self):
+        for program in self.programs.values():
+            yield program
 
     # def add_program(self, name, program):
     #     self.programs[name] = program 
@@ -156,7 +182,7 @@ class Layer(object):
 
 
 class LinkedLayer(Layer):
-    def mask(self, mask):
+    def mask(self, mask=None):
         if mask is None:
             for p in self.programs.values():
                 p.updateAttributes(filter=None)

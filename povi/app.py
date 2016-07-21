@@ -19,10 +19,9 @@ from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
 from PyQt5.QtWidgets import QApplication, QWidget, QToolBox
 
-from .transforms import perspective, ortho, scale, translate, rotate, xrotate, yrotate, zrotate
+from .transforms import perspective, ortho, scale, translate
 from .layer import *
 from .linalg import quaternion as q
-from .shader import *
 
 class App(QApplication):
 
@@ -36,7 +35,7 @@ class App(QApplication):
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.add_data_source_triangle = self.viewerWindow.add_data_source_triangle
-        self.layer_manager = self.viewerWindow.layer_manager
+        self.layers = self.viewerWindow.layer_manager
         self.add_layer = self.viewerWindow.add_layer
         
         self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
@@ -96,7 +95,7 @@ l       - light/dark background
 -       - decrease point size
 
 --Mouse controls
-drag                 - rotate dataset (arcball)
+drag               
 shift + move         - translate dataset
 scroll               - scale dataset
 shift + scroll       - change field of view
@@ -169,17 +168,17 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
     def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         if len(self.layer_manager.layers) == 0:
             self.layer_manager.add_layer(Layer(name='Default'))
-        self.layer_manager.layers[0].add_data_source(name, opts, points, normals=normals, radii=radii, intensity=intensity, category=category, zrange=zrange, **kwargs)
+        self.layer_manager.layers['Default'].add_data_source(name, opts, points, normals=normals, radii=radii, intensity=intensity, category=category, zrange=zrange, **kwargs)
 
     def add_data_source_line(self, name, coords_start, coords_end, **args):
         if len(self.layer_manager.layers) == 0:
             self.layer_manager.add_layer(Layer(name='Default'))
-        self.layer_manager.layers[0].add_data_source_line(name, coords_start, coords_end, **args)
+        self.layer_manager.layers['Default'].add_data_source_line(name, coords_start, coords_end, **args)
 
     def add_data_source_triangle(self, name, coords, normals, **args):
         if len(self.layer_manager.layers) == 0:
             self.layer_manager.add_layer(Layer(name='Default'))
-        self.layer_manager.layers[0].add_data_source_triangle(name, coords, normals, **args)
+        self.layer_manager.layers['Default'].add_data_source_triangle(name, coords, normals, **args)
 
     def run(self):
         self.initialize()
@@ -192,7 +191,10 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
 
     def center_view(self, center=None):
         if center is None:
-            center = self.data_center
+            center = self.layer_manager.first.get_center()
+            data_range = self.layer_manager.first.data_range
+            self.data_width = data_range[0]
+            self.data_height = data_range[2]
         self.translation = np.zeros(3)
         self.model = np.eye(4, dtype=np.float32)
         translate(self.model, -center[0], -center[1], -center[2])
@@ -201,11 +203,6 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         self.update_view_matrix()
 
     def initialize(self):
-        self.data_center = self.layer_manager.layers[-1].get_center()
-        data_range = self.layer_manager.layers[-1].data_range
-        self.data_width = data_range[0]
-        self.data_height = data_range[2]
-
         self.context.makeCurrent(self)
 
         gl.glDepthMask(gl.GL_TRUE)
@@ -216,7 +213,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
 
         view_width, view_height = [x/self.radius for x in self.size]
 
-        translate(self.model, -self.data_center[0], -self.data_center[1], -self.data_center[2])
+        self.center_view()
         for program in self.layer_manager.programs():
             program.setUniform('u_model', self.model)
             program.setUniform('u_view', self.view)
