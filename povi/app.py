@@ -17,7 +17,7 @@ import OpenGL.GL as gl
 from PyQt5 import uic
 from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtGui import (QOpenGLContext, QSurfaceFormat, QWindow)
-from PyQt5.QtWidgets import QApplication, QWidget, QToolBox
+from PyQt5.QtWidgets import QApplication, QWidget, QToolBox, QTreeWidgetItem
 
 from .transforms import perspective, ortho, scale, translate
 from .layer import *
@@ -67,20 +67,22 @@ class ToolsDialog(QWidget):
         self.ui = uic.loadUi(os.path.join(os.path.dirname(__file__),'tools.ui'), self)
         self.app = app
 
-        # populate datalayers list
-        # print self.app.viewerWindow.data_programs.keys()
-        l=[]
-        for program_name, p in list(self.app.viewerWindow.layer_manager.programs(with_names=True)):
-            l.append(program_name)
-        self.ui.listWidget_layers.addItems(l)
+        for layer in self.app.layers:
+            item = QTreeWidgetItem([layer.name], 0)
+            for program in layer:
+                item.addChild(QTreeWidgetItem([program.name], 0))
+            self.ui.treeWidget_layers.addTopLevelItem(item)
+            self.ui.treeWidget_layers.expandItem(item)
 
         # self.ui.doubleSpinBox_filterRadius.valueChanged.connect(self.app.update_radius)
         # self.ui.spinBox_linkcount.valueChanged.connect(self.app.filter_linkcount)
-        # self.ui.pushButton_regraph.clicked.connect(self.app.draw_graphs)
+        # self.ui.doubleSpinBox_contractthres.valueChanged.connect(self.app.doubleSpinBox_contractthres)
+        # self.ui.pushButton_regraph.clicked.connect(self.app.draw_clusters)
         # self.ui.groupBox_component.clicked.connect(self.app.filter_component_all)
         # self.ui.comboBox_component.activated.connect(self.app.filter_component)
-        self.ui.listWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
-
+        # self.ui.listWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
+        self.ui.treeWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
+        # import ipdb; ipdb.set_trace()
 class ViewerWindow(QWindow):
 
     instructions = """

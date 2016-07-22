@@ -166,7 +166,7 @@ def mat(input, min_r, max_r, near_clip, far_clip):
         name = 'Bisectors',
         coords_start = ma.D['ma_coords'][f_r],
         coords_end = ma.D['ma_bisec'][f_r]+ma.D['ma_coords'][f_r],
-        color=(0,1,0)
+        color=(.2,.2,1)
     )
     c.add_data_source_line(
         name = 'Primary spokes',

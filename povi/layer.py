@@ -55,7 +55,6 @@ class Layer(object):
     def clear(self):
         for program in self:
             program.delete()
-        self.is_visible = True
         self.programs = OrderedDict()
         self.bb_min = None
         self.bb_max = None
@@ -75,9 +74,7 @@ class Layer(object):
             for p in self.programs.values():
                 p.draw()
 
-    def update_box(self, data_array):
-        d_min = tuple(np.nanmin( data_array, axis=0 ))
-        d_max = tuple(np.nanmax( data_array, axis=0 ))
+    def update_box(self, d_min, d_max):
         if self.bb_min is None:
             self.bb_min = d_min
             self.bb_max = d_max
@@ -94,7 +91,10 @@ class Layer(object):
     def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
-        d_min, d_max = self.update_box(points)
+        d_min = np.nanmin( points, axis=0 )
+        d_max = np.nanmax( points, axis=0 )
+        if len(self.programs) == 0:
+            d_min, d_max = self.update_box(d_min, d_max)
 
         attribute_definitions = []
         data_list = []
@@ -137,7 +137,10 @@ class Layer(object):
     def add_data_source_line(self, name, coords_start, coords_end, **args):
         #interleave coordinates
         m,n = coords_start.shape
-        self.update_box(coords_start)
+        d_min = np.nanmin( coords_start, axis=0 )
+        d_max = np.nanmax( coords_start, axis=0 )
+        if len(self.programs) == 0:
+            d_min, d_max = self.update_box(d_min, d_max)
 
         vertices = np.empty((m*2,n), dtype=coords_start.dtype)
         vertices[0::2] = coords_start
@@ -155,8 +158,11 @@ class Layer(object):
         return program
 
     def add_data_source_triangle(self, name, coords, normals, **args):
-        self.update_box(coords)
         m,n = coords.shape
+        d_min = np.nanmin( coords, axis=0 )
+        d_max = np.nanmax( coords, axis=0 )
+        if len(self.programs) == 0:
+            d_min, d_max = self.update_box(d_min, d_max)
 
         data = np.empty( m, [('a_position', np.float32, 3), ('a_normal', np.float32, 3)] )
         data['a_position'] = coords
