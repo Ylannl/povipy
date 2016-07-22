@@ -109,7 +109,7 @@ class SimpleShaderProgram(object):
             # self.setAttributes(self.data)
             gl.glUseProgram(self.program)
             gl.glBindVertexArray(self.VAO)
-            # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
             gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             gl.glBindVertexArray(0)
             gl.glUseProgram(0)

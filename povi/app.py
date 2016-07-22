@@ -35,7 +35,7 @@ class App(QApplication):
         self.add_data_source = self.viewerWindow.add_data_source
         self.add_data_source_line = self.viewerWindow.add_data_source_line
         self.add_data_source_triangle = self.viewerWindow.add_data_source_triangle
-        self.layers = self.viewerWindow.layer_manager
+        self.layer_manager = self.viewerWindow.layer_manager
         self.add_layer = self.viewerWindow.add_layer
         
         self.viewerWindow.visibility_toggle_listeners.append(self.set_layer_visibility)
@@ -54,7 +54,7 @@ class App(QApplication):
         
     def set_layer_selection(self):
         selected_names = [item.text(0) for item in self.dialog.ui.treeWidget_layers.selectedItems()]
-        for layer in self.layers:
+        for layer in self.layer_manager:
             layer.is_visible = layer.name in selected_names
             if layer.name=="Clusters": continue
             for program in layer:
@@ -67,7 +67,7 @@ class ToolsDialog(QWidget):
         self.ui = uic.loadUi(os.path.join(os.path.dirname(__file__),'tools.ui'), self)
         self.app = app
 
-        for layer in self.app.layers:
+        for layer in self.app.layer_manager:
             item = QTreeWidgetItem([layer.name], 0)
             item.setSelected(True)
             for program in layer:

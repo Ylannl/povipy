@@ -14,6 +14,7 @@ class LayerManager(object):
         self.layers[layer.name] = layer
         if self.first is None: self.first = layer
         self.last = layer
+        return layer
 
     def draw(self):
         for layer in self:
