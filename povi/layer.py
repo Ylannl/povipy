@@ -51,6 +51,7 @@ class Layer(object):
 
     def toggle(self):
         self.is_visible = not self.is_visible
+        return self.is_visible
 
     def clear(self):
         for program in self:

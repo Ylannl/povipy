@@ -48,7 +48,7 @@ class App(QApplication):
         self.exec_()
         
     def set_layer_visibility(self, name, is_visible):
-        items = self.dialog.ui.listWidget_layers.findItems(name,Qt.MatchExactly)
+        items = self.dialog.ui.treeWidget_layers.findItems(name,Qt.MatchExactly)
         for item in items:
             item.setSelected(is_visible)
         
@@ -69,6 +69,7 @@ class ToolsDialog(QWidget):
 
         for layer in self.app.layers:
             item = QTreeWidgetItem([layer.name], 0)
+            item.setSelected(True)
             for program in layer:
                 item.addChild(QTreeWidgetItem([program.name], 0))
             self.ui.treeWidget_layers.addTopLevelItem(item)
@@ -188,7 +189,6 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
     def set_layer_visibility(self, name, is_visible):
         for listener in self.visibility_toggle_listeners:
             listener(name, is_visible)
-        self.data_programs[name].is_visible = is_visible
 
     def center_view(self, center=None):
         if center is None:
@@ -353,9 +353,13 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         elif key == Qt.Key_L:
             self.bg_white = not self.bg_white
             self.set_bg()
-        # elif Qt.Key_0 <= key <= Qt.Key_9:
-        #     i = int(chr(key))-1
-        #     if i < len(list(self.data_programs.keys())):
+        elif Qt.Key_0 <= key <= Qt.Key_9:
+            i = int(chr(key))-1
+            layers = self.layer_manager.layers.items()
+            if i < len(layers):
+                name, layer = layers[i]
+                self.set_layer_visibility(name,layer.toggle()) 
+
         #         if self.multiview:
         #             self.set_layer_visibility(list(self.data_programs.keys())[i], not list(self.data_programs.values())[i].is_visible)
         #         else:
