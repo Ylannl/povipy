@@ -56,34 +56,34 @@ class App(QApplication):
         selected_names = [item.text(0) for item in self.dialog.ui.treeWidget_layers.selectedItems()]
         for layer in self.layer_manager:
             layer.is_visible = layer.name in selected_names
-            if layer.name=="Clusters": continue
+            if layer.is_aggregate: continue
             for program in layer:
                 program.is_visible = program.name in selected_names
         self.viewerWindow.render()
 
 class ToolsDialog(QWidget):
-    def __init__(self, app, parent=None):
+    def __init__(self, app, ui_path=os.path.join(os.path.dirname(__file__),'tools.ui'), parent=None):
         super(ToolsDialog, self).__init__(parent)
-        self.ui = uic.loadUi(os.path.join(os.path.dirname(__file__),'tools.ui'), self)
+        self.ui = uic.loadUi(ui_path, self)
         self.app = app
 
-        for layer in self.app.layer_manager:
-            item = QTreeWidgetItem([layer.name], 0)
-            item.setSelected(True)
-            for program in layer:
-                item.addChild(QTreeWidgetItem([program.name], 0))
-            self.ui.treeWidget_layers.addTopLevelItem(item)
-            self.ui.treeWidget_layers.expandItem(item)
+        self.addLayers()
+        self.connectUI()
 
-        # self.ui.doubleSpinBox_filterRadius.valueChanged.connect(self.app.update_radius)
-        # self.ui.spinBox_linkcount.valueChanged.connect(self.app.filter_linkcount)
-        # self.ui.doubleSpinBox_contractthres.valueChanged.connect(self.app.doubleSpinBox_contractthres)
-        # self.ui.pushButton_regraph.clicked.connect(self.app.draw_clusters)
-        # self.ui.groupBox_component.clicked.connect(self.app.filter_component_all)
-        # self.ui.comboBox_component.activated.connect(self.app.filter_component)
-        # self.ui.listWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
+    def addLayers(self):
+        for layer in self.app.layer_manager:
+            self.addLayer(layer)
+    def addLayer(self, layer):
+        item = QTreeWidgetItem([layer.name], 0)
+        for program in layer:
+            item.addChild(QTreeWidgetItem([program.name], 0))
+        self.ui.treeWidget_layers.addTopLevelItem(item)
+        self.ui.treeWidget_layers.expandItem(item)
+        item.setSelected(True)
+
+    def connectUI(self):
         self.ui.treeWidget_layers.itemSelectionChanged.connect(self.app.set_layer_selection)
-        # import ipdb; ipdb.set_trace()
+
 class ViewerWindow(QWindow):
 
     instructions = """
@@ -324,15 +324,19 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.center_view()
             self.update_projection_matrix()
         elif key == Qt.Key_Minus:
-            for program in self.layer_manager.programs():
-                if program.draw_type == 'points':
-                    if (program.is_visible and self.multiview) or not self.multiview:
-                        program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
+            for layer in self.layer_manager:
+                if layer.is_visible:
+                    for program in layer:
+                        if program.draw_type == 'points':
+                            if (program.is_visible and self.multiview) or not self.multiview:
+                                program.setUniform('u_point_size', program.uniforms['u_point_size']/1.2)
         elif key == Qt.Key_Equal:
-            for program in self.layer_manager.programs():
-                if program.draw_type == 'points':
-                    if (program.is_visible and self.multiview) or not self.multiview:
-                        program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
+            for layer in self.layer_manager:
+                if layer.is_visible:
+                    for program in layer:
+                        if program.draw_type == 'points':
+                            if (program.is_visible and self.multiview) or not self.multiview:
+                                program.setUniform('u_point_size', program.uniforms['u_point_size']*1.2)
         elif key == Qt.Key_B:
             for program in self.layer_manager.programs():
                 if program.is_visible and program.draw_type == 'points':

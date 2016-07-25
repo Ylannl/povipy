@@ -37,12 +37,13 @@ class LayerManager(object):
 
 class Layer(object):
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, is_aggregate=False):
         self.name = name
         self.is_visible = False
         self.programs = OrderedDict()
         self.bb_min = None
         self.bb_max = None
+        self.is_aggregate = is_aggregate
 
     def enable(self):
         self.is_visible = True
