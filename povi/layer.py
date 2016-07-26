@@ -142,8 +142,8 @@ class Layer(object):
         m,n = coords_start.shape
         d_min = np.nanmin( coords_start, axis=0 )
         d_max = np.nanmax( coords_start, axis=0 )
-        if len(self.programs) == 0:
-            d_min, d_max = self.update_box(d_min, d_max)
+        # if len(self.programs) == 0:
+        d_min, d_max = self.update_box(d_min, d_max)
 
         vertices = np.empty((m*2,n), dtype=coords_start.dtype)
         vertices[0::2] = coords_start
