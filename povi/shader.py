@@ -102,6 +102,9 @@ class SimpleShaderProgram(object):
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
         gl.glBindVertexArray(0)
 
+        # ensure correct mask is rendered:
+        self.updateAttributes()
+
     def setUniform(self, name, data):
         gl.glUseProgram(self.program)
         loc = gl.glGetUniformLocation(self.program, name)
