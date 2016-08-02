@@ -359,7 +359,7 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
             self.set_bg()
         elif Qt.Key_0 <= key <= Qt.Key_9:
             i = int(chr(key))-1
-            layers = self.layer_manager.layers.items()
+            layers = [item for item in self.layer_manager.layers.items()]
             if i < len(layers):
                 name, layer = layers[i]
                 self.set_layer_visibility(name,layer.toggle()) 
