@@ -8,18 +8,20 @@ Bare-bones in-core point cloud viewer made in python. Features:
 * colormaps
 * runs on windows and mac (linux should work too but not tested)
 
+It was originally developed for visualisation of Medial Axis point clouds (see [skel3d](https://github.com/tudelft3d/skel3d)).
+
 ## Installing
 First install PyQT5.
 
-Then install povipy with pip.
+Then clone this repository install with `setup.py`, i.e.
 ```
-pip install git+https://github.com/Ylannl/povipy.git --process-dependency-links
+python setup.py install
 ```
 
 ## Using
-For MAT datasets created with [masbcpp](https://github.com/tudelft3d/masbcpp):
+See the example script.
 ```
-povimat.py mydata_npy
+python examples/example.py
 ```
 
 ## Limitations
