@@ -1,6 +1,4 @@
 import numpy as np
-import click
-
 from povi import App, Layer
 
 def get_3d_pointcloud():
@@ -27,7 +25,6 @@ def get_3d_pointcloud():
 
     return np.transpose(np.vstack([x,y,z]))
 
-@click.command(help='Example viewing program')
 def view():
     povi_app = App()
     
