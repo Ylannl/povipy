@@ -47,24 +47,6 @@
      </layout>
     </widget>
    </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_component">
-     <property name="title">
-      <string>Show single component only</string>
-     </property>
-     <property name="checkable">
-      <bool>true</bool>
-     </property>
-     <property name="checked">
-      <bool>false</bool>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4">
-      <item>
-       <widget class="QComboBox" name="comboBox_component"/>
-      </item>
-     </layout>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources/>
