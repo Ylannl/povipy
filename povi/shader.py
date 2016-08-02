@@ -66,7 +66,6 @@ class SimpleShaderProgram(object):
             if self.default_mask is None:
                 data = self.data
             else:
-                print(self.default_mask)
                 data = self.data[self.default_mask]
         else:
             data = self.data[filter]
