@@ -13,7 +13,7 @@ It was originally developed for visualisation of Medial Axis point clouds (see [
 ## Installing
 First install PyQT5.
 
-Then clone this repository install with `setup.py`, i.e.
+Then clone this repository and install with `setup.py`, i.e.
 ```
 python setup.py install
 ```
