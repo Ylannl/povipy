@@ -24,6 +24,10 @@ class SimpleShaderProgram(object):
         if 'alternate_vcolor' in options:
             self.defines += '#define alternate_vcolor\n'
 
+        self.default_mask = None
+        if 'default_mask' in args:
+            self.default_mask = args['default_mask']
+
         self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES, 'line_strip':gl.GL_LINE_STRIP, 'line_loop':gl.GL_LINE_LOOP}
 
     def initialise(self):
@@ -57,8 +61,13 @@ class SimpleShaderProgram(object):
         gl.glDeleteProgram(self.program)
 
     def updateAttributes(self, filter=None):
+        # set the correct filter/mask
         if filter is None:
-            data = self.data
+            if self.default_mask is None:
+                data = self.data
+            else:
+                print(self.default_mask)
+                data = self.data[self.default_mask]
         else:
             data = self.data[filter]
         self.dataLen = data.shape[0]
@@ -197,7 +206,7 @@ class PointShaderProgram(SimpleShaderProgram):
     _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
     
     def __init__(self, options=['fixed_point'], **kwargs):
-        super(PointShaderProgram, self).__init__(options, draw_type='points', is_visible=False)
+        super(PointShaderProgram, self).__init__(options, draw_type='points', is_visible=False, **kwargs)
 
         self.zmin, self.zmax = kwargs['zrange']
 
