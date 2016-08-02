@@ -28,17 +28,17 @@ def get_3d_pointcloud():
     return np.transpose(np.vstack([x,y,z]))
 
 @click.command(help='Example viewing program')
-def mat():
-    c = App()
+def view():
+    povi_app = App()
     
-    example_layer = c.add_layer(Layer(name='Example Layer'))
+    example_layer = povi_app.add_layer(Layer(name='Example Layer'))
     example_layer.add_data_source(
         name = 'Points', # this should be a unique name within this layer
         opts=['splat_point','adaptive_point',], # rendering options
-        points=get_3d_pointcloud()
+        points=get_3d_pointcloud(),
     )
     
-    c.run()
+    povi_app.run()
 
 if __name__ == '__main__':
-    mat()
+    view()
