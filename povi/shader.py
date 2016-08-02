@@ -208,7 +208,7 @@ class PointShaderProgram(SimpleShaderProgram):
     _all_modes = ['with_normals', 'with_point_radius', 'with_intensity', 'splat_disk', 'splat_point', 'adaptive_point', 'fixed_point', 'fixed_color']
     
     def __init__(self, options=['fixed_point'], **kwargs):
-        super(PointShaderProgram, self).__init__(options, draw_type='points', is_visible=False, **kwargs)
+        super(PointShaderProgram, self).__init__(options, draw_type='points', **kwargs)
 
         self.zmin, self.zmax = kwargs['zrange']
 

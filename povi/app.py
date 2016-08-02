@@ -76,7 +76,9 @@ class ToolsDialog(QWidget):
     def addLayer(self, layer):
         item = QTreeWidgetItem([layer.name], 0)
         for program in layer:
-            item.addChild(QTreeWidgetItem([program.name], 0))
+            child_item = QTreeWidgetItem([program.name], 0)
+            item.addChild(child_item)
+            child_item.setSelected(program.is_visible)
         self.ui.treeWidget_layers.addTopLevelItem(item)
         self.ui.treeWidget_layers.expandItem(item)
         item.setSelected(True)
