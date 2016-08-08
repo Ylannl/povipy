@@ -343,8 +343,10 @@ class PointShaderProgram(SimpleShaderProgram):
                 v_normal = u_view * u_model * vec4(a_normal, 0);
                 v_normal = normalize(v_normal);
 
-                vec4 lighting_direction = vec4(1,1,1,0);
-                v_lightpwr = clamp(abs(dot(v_normal, normalize(lighting_direction))), 0.3, 1);
+                vec4 lighting_direction_1 = vec4(1,1,1,0);
+                vec4 lighting_direction_2 = vec4(0,0.5,1,0);
+                float L = dot(v_normal, normalize(lighting_direction_1)) + 0.5*dot(v_normal, normalize(lighting_direction_2));
+                v_lightpwr = clamp(abs(L), 0.3, 1);
             #else
                 v_lightpwr = 1.0;
             #endif
