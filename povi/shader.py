@@ -275,7 +275,7 @@ class PointShaderProgram(SimpleShaderProgram):
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         elif scheme == 'validation':
-            image = np.ones(width,3).astype(np.float32)
+            image = np.ones((width,3), dtype=np.float32)
             image[0,:] = [1.,0.,0.]
             image[1,:] = [0.,1.,0.]
         else:
@@ -286,43 +286,41 @@ class PointShaderProgram(SimpleShaderProgram):
     def create_colormap(self, scheme='jet'):
         self.texture = gl.glGenTextures(1)
         gl.glActiveTexture(gl.GL_TEXTURE0)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT);
+        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture)
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT)
 
         gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR);
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
         
         # Load and generate the texture
         image = self.get_colormap(scheme)
         width = len(image)
 
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
-        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
-        gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, 0)
 
         return self.texture
 
 
     def update_colormap(self, scheme='jet'):
         gl.glActiveTexture(gl.GL_TEXTURE0)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);        
+        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture)        
         
         # Load and generate the texture
         image = self.get_colormap(scheme)
         width = len(image)
 
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
-        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
-        gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
-
-        return texture
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, 0)
 
     def draw(self):
         if self.is_visible:
             # self.setAttributes(self.data)
             gl.glUseProgram(self.program)
             gl.glActiveTexture(gl.GL_TEXTURE0)
-            gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);
+            gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture)
             gl.glBindVertexArray(self.VAO)
             gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             gl.glBindVertexArray(0)
@@ -390,7 +388,7 @@ class PointShaderProgram(SimpleShaderProgram):
 
                 vec4 lighting_direction_1 = vec4(1,1,1,0);
                 vec4 lighting_direction_2 = vec4(0,0.5,1,0);
-                float L = dot(v_normal, normalize(lighting_direction_1)) + 0.5*dot(v_normal, normalize(lighting_direction_2));
+                float L = dot(v_normal, normalize(lighting_direction_1)) + dot(v_normal, normalize(lighting_direction_2));
                 v_lightpwr = clamp(abs(L), 0.3, 1);
             #else
                 v_lightpwr = 1.0;
