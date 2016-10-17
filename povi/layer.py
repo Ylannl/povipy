@@ -194,11 +194,11 @@ class LinkedLayer(Layer):
     def mask(self, mask=None):
         if mask is None:
             for p in self.programs.values():
-                p.updateAttributes(filter=None)
+                p.setMask(filter=None)
         elif mask.dtype==bool:
             for p in self.programs.values():
                 if p.draw_type == 'points':
-                    p.updateAttributes(filter=mask)
+                    p.setMask(filter=mask)
                 elif p.draw_type == 'lines':
-                    p.updateAttributes(filter=np.repeat(mask,2))
+                    p.setMask(filter=np.repeat(mask,2))
         

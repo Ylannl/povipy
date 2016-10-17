@@ -21,6 +21,8 @@ class SimpleShaderProgram(object):
         self.color = (1,0,0)
         self.defines = ''
 
+        self.attribute_layout = {}
+
         if 'alternate_vcolor' in options:
             self.defines += '#define alternate_vcolor\n'
 
@@ -60,7 +62,7 @@ class SimpleShaderProgram(object):
         # gl.glDeleteBuffers(1, self.buffer)
         gl.glDeleteProgram(self.program)
 
-    def updateAttributes(self, filter=None):
+    def setMask(self, filter=None):
         # set the correct filter/mask
         if filter is None:
             if self.default_mask is None:
@@ -71,7 +73,7 @@ class SimpleShaderProgram(object):
             data = self.data[filter]
         self.dataLen = data.shape[0]
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, data.nbytes, data, gl.GL_DYNAMIC_DRAW)
+        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, data.nbytes, data)
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
     def setAttributes(self, data):
@@ -93,6 +95,9 @@ class SimpleShaderProgram(object):
             else:
                 size = data[name].shape[1]
             loc = gl.glGetAttribLocation(self.program, name)
+
+            # remember these properties for later updating of buffer
+            self.attribute_layout[name] = {'offset':offset}
             
             gl.glVertexAttribPointer(loc, size, gl.GL_FLOAT, False, stride, ctypes.c_void_p(offset))
             gl.glEnableVertexAttribArray(loc)
@@ -102,7 +107,22 @@ class SimpleShaderProgram(object):
         gl.glBindVertexArray(0)
 
         # ensure correct mask is rendered:
-        self.updateAttributes()
+        self.setMask()
+
+    def updateAttribute(self, name, data):
+        if not (self.data[name].shape == data.shape and data.dtype==np.float32):
+            raise Exception('Array size or dtype incorrect')
+        self.data[name] = data
+        # Make this buffer the default one
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+        # Upload data
+        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, self.attribute_layout[name]['offset'], data.nbytes, data)
+
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+
+
+        # ensure correct mask is rendered:
+        self.setMask()
 
     def setUniform(self, name, data):
         gl.glUseProgram(self.program)
@@ -245,15 +265,7 @@ class PointShaderProgram(SimpleShaderProgram):
         self.texture = self.create_colormap(scheme=colormap)
         
 
-    def create_colormap(self, scheme='jet'):
-        texture = gl.glGenTextures(1)
-        gl.glActiveTexture(gl.GL_TEXTURE0)
-        gl.glBindTexture(gl.GL_TEXTURE_1D, texture);
-        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT);
-
-        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR);
-        
+    def get_colormap(self, scheme):
         # Load and generate the texture
         width = 256
         if scheme == 'random':
@@ -262,9 +274,42 @@ class PointShaderProgram(SimpleShaderProgram):
             # gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT);
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
+        elif scheme == 'validation':
+            image = np.ones(width,3).astype(np.float32)
+            image[0,:] = [1.,0.,0.]
+            image[1,:] = [0.,1.,0.]
         else:
             from .colormaps import cm
             image = np.array(cm[scheme], dtype=np.float32)
+        return image
+
+    def create_colormap(self, scheme='jet'):
+        self.texture = gl.glGenTextures(1)
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);
+        gl.glTexParameteri(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_WRAP_S, gl.GL_REPEAT);
+
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
+        gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR);
+        
+        # Load and generate the texture
+        image = self.get_colormap(scheme)
+        width = len(image)
+
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
+        gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
+        gl.glBindTexture(gl.GL_TEXTURE_1D, 0);
+
+        return self.texture
+
+
+    def update_colormap(self, scheme='jet'):
+        gl.glActiveTexture(gl.GL_TEXTURE0)
+        gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture);        
+        
+        # Load and generate the texture
+        image = self.get_colormap(scheme)
+        width = len(image)
 
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1);
         gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image);
