@@ -276,8 +276,8 @@ class PointShaderProgram(SimpleShaderProgram):
             # gl.glTexParameterf(gl.GL_TEXTURE_1D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST);
         elif scheme == 'validation':
             image = np.ones((width,3), dtype=np.float32)
-            image[0,:] = [1.,0.,0.]
-            image[1,:] = [0.,1.,0.]
+            image[:128,:] = [1.,0.,0.]
+            image[128:,:] = [0.,1.,0.]
         else:
             from .colormaps import cm
             image = np.array(cm[scheme], dtype=np.float32)
