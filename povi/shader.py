@@ -67,10 +67,13 @@ class SimpleShaderProgram(object):
         if filter is None:
             if self.default_mask is None:
                 data = self.data
+                self.current_mask = np.ones(self.dataLen, dtype=bool)
             else:
                 data = self.data[self.default_mask]
+                self.current_mask = self.default_mask
         else:
             data = self.data[filter]
+            self.current_mask = filter
         self.dataLen = data.shape[0]
         gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, data.nbytes, data)
@@ -114,15 +117,15 @@ class SimpleShaderProgram(object):
             raise Exception('Array size or dtype incorrect')
         self.data[name] = data
         # Make this buffer the default one
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        # Upload data
-        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, self.attribute_layout[name]['offset'], data.nbytes, data)
+        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+        # # Upload data
+        # datamasked = data[self.current_mask] 
+        # gl.glBufferSubData(gl.GL_ARRAY_BUFFER, self.attribute_layout[name]['offset'], datamasked.nbytes, datamasked)
 
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
-
+        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
 
         # ensure correct mask is rendered:
-        self.setMask()
+        self.setMask(self.current_mask)
 
     def setUniform(self, name, data):
         gl.glUseProgram(self.program)
