@@ -118,8 +118,9 @@ ctrl + alt + scroll  - move far and near clipping plane simultaniously
         format.setStereo(False)
         format.setSwapBehavior(QSurfaceFormat.DoubleBuffer)
         format.setDepthBufferSize(24)
+        format.setSamples(16)
         
-        self.context = QOpenGLContext()
+        self.context = QOpenGLContext(self)
         self.context.setFormat(format)
         if not self.context.create():
             raise Exception('self.context.create() failed')

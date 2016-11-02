@@ -46,9 +46,13 @@ class SimpleShaderProgram(object):
         compileShader(vertex_shader, self.vertex_str())
         compileShader(fragment_shader, self.fragment_str())
 
+
         gl.glAttachShader(self.program, vertex_shader)
         gl.glAttachShader(self.program, fragment_shader)
         gl.glLinkProgram(self.program)
+
+        if not gl.glGetProgramiv(self.program, gl.GL_LINK_STATUS):
+            print(gl.glGetProgramInfoLog(self.program))
 
         gl.glDetachShader(self.program, vertex_shader)
         gl.glDetachShader(self.program, fragment_shader)
@@ -139,14 +143,22 @@ class SimpleShaderProgram(object):
         gl.glUseProgram(0)
 
     def draw(self):
+        # if self.draw_type == "lines" and self.is_visible:
+        #     print("Drawing [{}{}]".format(self.dataLen, self.is_visible))
         if self.is_visible:
             # self.setAttributes(self.data)
             gl.glUseProgram(self.program)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindVertexArray(self.VAO)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindVertexArray(0)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glUseProgram(0)
+            # assert(gl.glGetError() == gl.GL_NO_ERROR)
 
     def toggle_visibility(self):
         self.is_visible = not self.is_visible
