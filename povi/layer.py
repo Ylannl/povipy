@@ -91,7 +91,7 @@ class Layer(object):
         data_center = self.bb_min + self.data_range/2
         return data_center
 
-    def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, zrange=None, **kwargs):
+    def add_data_source(self, name, opts, points, normals=None, radii=None, intensity=None, category=None, irange=None, zrange=None, **kwargs):
         # points = points[~np.isnan(points).any(axis=1)]
         m,n = points.shape
         d_min = np.nanmin( points, axis=0 )
@@ -111,7 +111,11 @@ class Layer(object):
             data_list.append(radii)
         if intensity is not None:
             attribute_definitions.append(('a_intensity', np.float32, 1))
-            intensity *= 1./np.nanmax(intensity)
+            if irange is None:
+                vmin, vmax = np.nanmin(intensity), np.nanmax(intensity)
+            else:
+                vmin, vmax = irange 
+            intensity = (intensity-vmin) * 1/vmax
             # import pdb; pdb.set_trace()
             data_list.append(intensity)
         if category is not None:
