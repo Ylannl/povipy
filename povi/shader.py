@@ -27,10 +27,21 @@ class SimpleShaderProgram(object):
             self.defines += '#define alternate_vcolor\n'
 
         self.default_mask = None
+        # print (args)
+        # import ipdb;ipdb.set_trace()
         if 'default_mask' in args:
-            self.default_mask = args['default_mask']
+            filter = args['default_mask']
+
+            if filter.dtype == bool:
+                filter = np.flatnonzero(filter)
+            
+            self.default_mask = filter.astype(np.uint32)
 
         self.draw_types = {'points': gl.GL_POINTS, 'lines': gl.GL_LINES, 'triangles': gl.GL_TRIANGLES, 'line_strip':gl.GL_LINE_STRIP, 'line_loop':gl.GL_LINE_LOOP}
+
+        self.index_buffer = None
+        self.indexed_rendering = False
+        self.texture_rendering = False
 
     def initialise(self):
         def compileShader(handle, shader_source):
@@ -46,7 +57,6 @@ class SimpleShaderProgram(object):
         compileShader(vertex_shader, self.vertex_str())
         compileShader(fragment_shader, self.fragment_str())
 
-
         gl.glAttachShader(self.program, vertex_shader)
         gl.glAttachShader(self.program, fragment_shader)
         gl.glLinkProgram(self.program)
@@ -60,6 +70,7 @@ class SimpleShaderProgram(object):
         # Request a buffer slot from GPU
         self.buffer = gl.glGenBuffers(1)
         self.VAO = gl.glGenVertexArrays(1)
+        
 
     def delete(self):
         # gl.glDeleteVertexArrays(1, self.VAO)
@@ -67,21 +78,32 @@ class SimpleShaderProgram(object):
         gl.glDeleteProgram(self.program)
 
     def setMask(self, filter=None):
+        if self.index_buffer is None:
+            self.index_buffer = gl.glGenBuffers(1)
         # set the correct filter/mask
+        self.indexed_rendering = True
         if filter is None:
             if self.default_mask is None:
-                data = self.data
-                self.current_mask = np.ones(self.dataLen, dtype=bool)
+                self.indexed_rendering = False
+                return
             else:
-                data = self.data[self.default_mask]
-                self.current_mask = self.default_mask
-        else:
-            data = self.data[filter]
-            self.current_mask = filter
-        self.dataLen = data.shape[0]
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
-        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, data.nbytes, data)
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+                filter = self.default_mask
+        
+        if filter.dtype == bool:
+            filter = np.flatnonzero(filter)
+        filter = filter.astype(np.uint32) # GL_UNSIGNED_INT
+
+        # print('setting up element array {}'.format(self.program))
+        # print(filter)
+        # import ipdb; ipdb.set_trace()
+        gl.glBindVertexArray(self.VAO)
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.index_buffer)
+        gl.glBufferData(gl.GL_ELEMENT_ARRAY_BUFFER, filter.nbytes, filter, gl.GL_DYNAMIC_DRAW);
+        gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, 0)
+        gl.glBindVertexArray(0)
+
+        # self.current_mask = filter
+        self.indexLen = len(filter)
 
     def setAttributes(self, data):
         self.data = data
@@ -121,15 +143,15 @@ class SimpleShaderProgram(object):
             raise Exception('Array size or dtype incorrect')
         self.data[name] = data
         # Make this buffer the default one
-        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
         # # Upload data
-        # datamasked = data[self.current_mask] 
-        # gl.glBufferSubData(gl.GL_ARRAY_BUFFER, self.attribute_layout[name]['offset'], datamasked.nbytes, datamasked)
-
-        # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        gl.glBindVertexArray(self.VAO)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, data.nbytes, data)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
+        gl.glBindVertexArray(0)
 
         # ensure correct mask is rendered:
-        self.setMask(self.current_mask)
+        # self.setMask(self.current_mask)
 
     def setUniform(self, name, data):
         gl.glUseProgram(self.program)
@@ -148,12 +170,23 @@ class SimpleShaderProgram(object):
         if self.is_visible:
             # self.setAttributes(self.data)
             gl.glUseProgram(self.program)
+            if self.texture_rendering:
+                gl.glActiveTexture(gl.GL_TEXTURE0)
+                gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindVertexArray(self.VAO)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
-            gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            if self.indexed_rendering:
+                gl.glBindBuffer(gl.GL_ELEMENT_ARRAY_BUFFER, self.index_buffer)
+                gl.glDrawElements(self.draw_types[self.draw_type], self.indexLen, gl.GL_UNSIGNED_INT, 0)
+                assert(gl.glGetError() == gl.GL_NO_ERROR)
+                print("index rendering pid {}".format(self.program))
+                print(self.indexLen)
+            else:
+                gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindVertexArray(0)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
@@ -278,6 +311,7 @@ class PointShaderProgram(SimpleShaderProgram):
         if 'colormap' in kwargs:
             colormap = kwargs['colormap']
         self.texture = self.create_colormap(scheme=colormap)
+        self.texture_rendering = True
         
 
     def get_colormap(self, scheme):
@@ -329,17 +363,6 @@ class PointShaderProgram(SimpleShaderProgram):
         gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
         gl.glTexImage1D(gl.GL_TEXTURE_1D, 0, gl.GL_RGB32F, width, 0, gl.GL_RGB, gl.GL_FLOAT, image)
         gl.glBindTexture(gl.GL_TEXTURE_1D, 0)
-
-    def draw(self):
-        if self.is_visible:
-            # self.setAttributes(self.data)
-            gl.glUseProgram(self.program)
-            gl.glActiveTexture(gl.GL_TEXTURE0)
-            gl.glBindTexture(gl.GL_TEXTURE_1D, self.texture)
-            gl.glBindVertexArray(self.VAO)
-            gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
-            gl.glBindVertexArray(0)
-            gl.glUseProgram(0)
 
     def vertex_str(self):
         return """
