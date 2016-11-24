@@ -151,7 +151,7 @@ class SimpleShaderProgram(object):
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glBindVertexArray(self.VAO)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
-            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
+            # gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.buffer)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)
             gl.glDrawArrays(self.draw_types[self.draw_type], 0, self.dataLen)
             # assert(gl.glGetError() == gl.GL_NO_ERROR)

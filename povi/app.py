@@ -45,7 +45,10 @@ class App(QApplication):
         if self.dialog is None:
             self.dialog = ToolsDialog(self)
         self.dialog.show()
-        self.exec_()
+        try:
+            cfg = get_ipython().config
+        except:
+            self.exec_()
         
     def set_layer_visibility(self, name, is_visible):
         items = self.dialog.ui.treeWidget_layers.findItems(name,Qt.MatchExactly)
